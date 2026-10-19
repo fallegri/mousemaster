@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ModuleId, ModuleProgress, PersonalRecord, UserSettings, ExerciseMetrics } from './types';
+import { ModuleId, ModuleProgress, PersonalRecord, UserSettings, ExerciseMetrics, UserProfile } from './types';
 import { MODULES } from './data/modules';
 import { sound } from './utils/sound';
 import { Header } from './components/Header';
@@ -15,6 +15,8 @@ import { RecordsView } from './components/RecordsView';
 import { AICoachView } from './components/AICoachView';
 import { SettingsModal } from './components/SettingsModal';
 import { CompletionModal } from './components/CompletionModal';
+import { RestorePracticeModal } from './components/RestorePracticeModal';
+import { CheckCircle2 } from 'lucide-react';
 
 // Exercise Components
 import { TargetClickExercise } from './components/exercises/TargetClickExercise';
@@ -28,6 +30,7 @@ const STORAGE_KEY_PROGRESS = 'mousemaster_progress';
 const STORAGE_KEY_RECORDS = 'mousemaster_records';
 const STORAGE_KEY_SETTINGS = 'mousemaster_settings';
 const STORAGE_KEY_DIFFICULTY = 'mousemaster_difficulty';
+const STORAGE_KEY_USER = 'mousemaster_user_profile';
 
 const defaultSettings: UserSettings = {
   aiProvider: 'nvidia',
@@ -38,15 +41,39 @@ const defaultSettings: UserSettings = {
   autoAdjustDifficulty: true,
 };
 
+const initialModulesProgress: Record<ModuleId, ModuleProgress> = {
+  'target-click': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
+  'action-clicks': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
+  'drag-drop': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
+  'scroll-vault': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
+  'box-select': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
+  'fluid-path': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'campaign' | 'free_practice' | 'records' | 'coach'>('campaign');
   const [activeModuleId, setActiveModuleId] = useState<ModuleId | null>(null);
   const [activeMode, setActiveMode] = useState<'campaign' | 'free_practice'>('campaign');
   const [difficultyFactor, setDifficultyFactor] = useState<number>(1.0);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
   const [completionMetrics, setCompletionMetrics] = useState<ExerciseMetrics | null>(null);
   const [exerciseKey, setExerciseKey] = useState(0);
   const [liveStats, setLiveStats] = useState<{ current: number; total: number; score: number } | undefined>(undefined);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Active User Profile
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_USER);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      name: 'Usuario 1',
+      userNumber: 1,
+      createdAt: new Date().toISOString(),
+    };
+  });
 
   // User Settings
   const [userSettings, setUserSettings] = useState<UserSettings>(() => {
@@ -63,14 +90,7 @@ export default function App() {
       const saved = localStorage.getItem(STORAGE_KEY_PROGRESS);
       if (saved) return JSON.parse(saved);
     } catch {}
-    return {
-      'target-click': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-      'action-clicks': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-      'drag-drop': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-      'scroll-vault': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-      'box-select': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-      'fluid-path': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-    };
+    return initialModulesProgress;
   });
 
   // Personal Records
@@ -196,24 +216,46 @@ export default function App() {
     setCompletionMetrics(null);
   };
 
-  // Reset all progress
-  const handleResetAllProgress = () => {
-    if (confirm('¿Estás seguro de que deseas reiniciar todas tus estrellas y marcas personales?')) {
-      localStorage.removeItem(STORAGE_KEY_PROGRESS);
+  // Restore practice: Cleans all local records, resets progress and creates new user
+  const handleConfirmRestorePractice = (newUserName: string) => {
+    sound.playClick(400);
+
+    // 1. Clean all local storage records & progress
+    try {
       localStorage.removeItem(STORAGE_KEY_RECORDS);
+      localStorage.removeItem(STORAGE_KEY_PROGRESS);
       localStorage.removeItem(STORAGE_KEY_DIFFICULTY);
-      setModulesProgress({
-        'target-click': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-        'action-clicks': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-        'drag-drop': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-        'scroll-vault': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-        'box-select': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-        'fluid-path': { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 },
-      });
-      setRecords({} as any);
-      setDifficultyFactor(1.0);
-      setIsSettingsOpen(false);
-    }
+    } catch {}
+
+    // 2. Reset progress state
+    setModulesProgress({ ...initialModulesProgress });
+    setRecords({} as any);
+    setDifficultyFactor(1.0);
+
+    // 3. Assume new user
+    const nextUserNumber = userProfile.userNumber + 1;
+    const newUser: UserProfile = {
+      name: newUserName || `Usuario ${nextUserNumber}`,
+      userNumber: nextUserNumber,
+      createdAt: new Date().toISOString(),
+    };
+
+    setUserProfile(newUser);
+    try {
+      localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(newUser));
+    } catch {}
+
+    // 4. Return to hub & close modal
+    setActiveModuleId(null);
+    setCompletionMetrics(null);
+    setIsRestoreModalOpen(false);
+    setActiveTab('campaign');
+
+    // 5. Toast notification
+    setToastMessage(`¡Práctica restaurada con éxito! Sesión iniciada para ${newUser.name}.`);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3500);
   };
 
   const totalStars = Object.values(modulesProgress).reduce((acc, curr) => acc + curr.stars, 0);
@@ -230,6 +272,8 @@ export default function App() {
           setCompletionMetrics(null);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenRestore={() => setIsRestoreModalOpen(true)}
+        userName={userProfile.name}
         totalStars={totalStars}
         soundEnabled={userSettings.soundEnabled}
         onToggleSound={() =>
@@ -324,6 +368,7 @@ export default function App() {
                 modulesProgress={modulesProgress}
                 records={records}
                 onStartPractice={(id) => handleStartModule(id, 'free_practice')}
+                onOpenRestore={() => setIsRestoreModalOpen(true)}
               />
             )}
             {activeTab === 'records' && (
@@ -331,6 +376,8 @@ export default function App() {
                 modulesProgress={modulesProgress}
                 records={records}
                 totalStars={totalStars}
+                userName={userProfile.name}
+                onOpenRestore={() => setIsRestoreModalOpen(true)}
               />
             )}
             {activeTab === 'coach' && (
@@ -355,6 +402,15 @@ export default function App() {
         />
       )}
 
+      {/* Restore Practice Confirmation Modal */}
+      {isRestoreModalOpen && (
+        <RestorePracticeModal
+          currentUserNumber={userProfile.userNumber}
+          onConfirmRestore={handleConfirmRestorePractice}
+          onClose={() => setIsRestoreModalOpen(false)}
+        />
+      )}
+
       {/* Settings Modal */}
       {isSettingsOpen && (
         <SettingsModal
@@ -363,8 +419,19 @@ export default function App() {
           onSaveSettings={handleSaveSettings}
           onUpdateDifficulty={handleUpdateDifficulty}
           onClose={() => setIsSettingsOpen(false)}
-          onResetProgress={handleResetAllProgress}
+          onResetProgress={() => {
+            setIsSettingsOpen(false);
+            setIsRestoreModalOpen(true);
+          }}
         />
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );

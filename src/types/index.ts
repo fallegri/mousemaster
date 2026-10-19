@@ -68,3 +68,10 @@ export interface PersonalRecord {
   accuracy: number;
   date: string;
 }
+
+export interface UserProfile {
+  name: string;
+  userNumber: number;
+  createdAt: string;
+}
+

@@ -1,18 +1,20 @@
 import React from 'react';
 import { MODULES } from '../data/modules';
 import { ModuleId, ModuleProgress, PersonalRecord } from '../types';
-import { Crosshair, MousePointerClick, Hand, ArrowUpDown, SquareDashed, Spline, Trophy, Play } from 'lucide-react';
+import { Crosshair, MousePointerClick, Hand, ArrowUpDown, SquareDashed, Spline, Trophy, Play, RotateCcw } from 'lucide-react';
 
 interface Props {
   modulesProgress: Record<ModuleId, ModuleProgress>;
   records: Record<ModuleId, PersonalRecord | undefined>;
   onStartPractice: (moduleId: ModuleId) => void;
+  onOpenRestore?: () => void;
 }
 
 export const FreePracticeView: React.FC<Props> = ({
   modulesProgress,
   records,
   onStartPractice,
+  onOpenRestore,
 }) => {
   const getIcon = (iconName: string) => {
     switch (iconName) {
@@ -46,9 +48,21 @@ export const FreePracticeView: React.FC<Props> = ({
             Entrena de forma aislada cualquiera de las destrezas con retos de mayor duración. Supera tus marcas personales y pon a prueba tu precisión.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-2xl border border-slate-200 text-xs">
-          <Trophy className="w-4 h-4 text-amber-500" />
-          <span className="text-slate-600">Récords guardados localmente</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200 text-xs">
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <span className="text-slate-600">Récords guardados localmente</span>
+          </div>
+          {onOpenRestore && (
+            <button
+              onClick={onOpenRestore}
+              className="px-3 py-2 text-xs font-semibold text-slate-700 hover:text-red-700 bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              title="Borrar todos los récords e iniciar nuevo usuario"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              <span>Restaurar Práctica</span>
+            </button>
+          )}
         </div>
       </div>
 
