@@ -16,6 +16,7 @@ import { AICoachView } from './components/AICoachView';
 import { SettingsModal } from './components/SettingsModal';
 import { CompletionModal } from './components/CompletionModal';
 import { RestorePracticeModal } from './components/RestorePracticeModal';
+import { MissionBriefingModal } from './components/MissionBriefingModal';
 import { CheckCircle2 } from 'lucide-react';
 
 // Exercise Components
@@ -61,6 +62,12 @@ export default function App() {
   const [exerciseKey, setExerciseKey] = useState(0);
   const [liveStats, setLiveStats] = useState<{ current: number; total: number; score: number } | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Mission Briefing States (indica qué desafío viene y cómo se juega)
+  const [pendingModuleId, setPendingModuleId] = useState<ModuleId | null>(null);
+  const [pendingMode, setPendingMode] = useState<'campaign' | 'free_practice'>('campaign');
+  const [isNextMissionFlow, setIsNextMissionFlow] = useState(false);
+  const [isBriefingOpen, setIsBriefingOpen] = useState(false);
 
   // Active User Profile
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
@@ -132,8 +139,28 @@ export default function App() {
     } catch {}
   };
 
-  // Start an exercise
-  const handleStartModule = (moduleId: ModuleId, mode: 'campaign' | 'free_practice' = 'campaign') => {
+  // Request module start (shows mission briefing with instructions first)
+  const handleRequestStartModule = (moduleId: ModuleId, mode: 'campaign' | 'free_practice' = 'campaign', isNext: boolean = false) => {
+    sound.playClick(650);
+    setPendingModuleId(moduleId);
+    setPendingMode(mode);
+    setIsNextMissionFlow(isNext);
+    setCompletionMetrics(null);
+    setIsBriefingOpen(true);
+  };
+
+  // Confirm start after reading instructions in briefing
+  const handleConfirmStartFromBriefing = () => {
+    if (!pendingModuleId) return;
+    setIsBriefingOpen(false);
+    setActiveModuleId(pendingModuleId);
+    setActiveMode(pendingMode);
+    setLiveStats(undefined);
+    setExerciseKey((prev) => prev + 1);
+  };
+
+  // Direct start for retries
+  const handleStartModuleDirect = (moduleId: ModuleId, mode: 'campaign' | 'free_practice' = 'campaign') => {
     sound.playClick(650);
     setActiveModuleId(moduleId);
     setActiveMode(mode);
@@ -185,7 +212,7 @@ export default function App() {
     setCompletionMetrics(metrics);
   };
 
-  // Advance to next mission
+  // Advance to next mission (opens briefing explaining next challenge and how to play)
   const handleNextMission = () => {
     if (!activeModuleId) {
       setCompletionMetrics(null);
@@ -194,7 +221,8 @@ export default function App() {
     const currentIdx = MODULES.findIndex((m) => m.id === activeModuleId);
     if (currentIdx >= 0 && currentIdx < MODULES.length - 1) {
       const nextMod = MODULES[currentIdx + 1];
-      handleStartModule(nextMod.id, activeMode);
+      setActiveModuleId(null);
+      handleRequestStartModule(nextMod.id, activeMode, true);
     } else {
       setActiveModuleId(null);
       setCompletionMetrics(null);
@@ -362,14 +390,14 @@ export default function App() {
               <CampaignView
                 modulesProgress={modulesProgress}
                 totalStars={totalStars}
-                onSelectModule={(id) => handleStartModule(id, 'campaign')}
+                onSelectModule={(id) => handleRequestStartModule(id, 'campaign', false)}
               />
             )}
             {activeTab === 'free_practice' && (
               <FreePracticeView
                 modulesProgress={modulesProgress}
                 records={records}
-                onStartPractice={(id) => handleStartModule(id, 'free_practice')}
+                onStartPractice={(id) => handleRequestStartModule(id, 'free_practice', false)}
                 onOpenRestore={() => setIsRestoreModalOpen(true)}
               />
             )}
@@ -391,6 +419,19 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Mission Briefing Modal (Indica previamente qué desafío viene y cómo se debe jugar) */}
+      {isBriefingOpen && pendingModuleId && (
+        <MissionBriefingModal
+          module={MODULES.find((m) => m.id === pendingModuleId) || MODULES[0]}
+          isNextMission={isNextMissionFlow}
+          onStart={handleConfirmStartFromBriefing}
+          onBack={() => {
+            setIsBriefingOpen(false);
+            setPendingModuleId(null);
+          }}
+        />
+      )}
 
       {/* Completion Modal */}
       {completionMetrics && (

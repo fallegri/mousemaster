@@ -14,6 +14,10 @@ export interface ModuleDefinition {
   description: string;
   iconName: string;
   levelNumber: number;
+  objective: string;
+  howToPlay: string[];
+  controls: string[];
+  proTip: string;
 }
 
 export interface ExerciseMetrics {

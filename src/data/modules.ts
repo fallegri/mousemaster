@@ -9,6 +9,14 @@ export const MODULES: ModuleDefinition[] = [
     category: 'Fundamentos',
     description: 'Desplaza el cursor hacia los objetivos estáticos y móviles. Golpea el centro para obtener máxima puntuación.',
     iconName: 'Crosshair',
+    objective: 'Entrenar la coordinación ojo-mano desplazando el ratón y haciendo clic en el centro de las dianas.',
+    controls: ['Movimiento continuo del ratón', 'Clic izquierdo simple'],
+    howToPlay: [
+      'Desplaza el cursor hacia la diana que aparece en el campo de prueba.',
+      'Apunta lo más cerca posible del punto blanco central (bullseye) para ganar 100 puntos.',
+      'Haz un clic izquierdo limpio y firme sin desviar el ratón al momento de presionar.',
+    ],
+    proTip: 'Apoya el antebrazo sobre el escritorio para que la muñeca no soporte todo el peso y ganes estabilidad.',
   },
   {
     id: 'action-clicks',
@@ -18,6 +26,14 @@ export const MODULES: ModuleDefinition[] = [
     category: 'Acciones Rápidas',
     description: 'Entrena la cadencia rítmica de dos toques seguidos sin desplazar el mouse y activa menús contextuales.',
     iconName: 'MousePointerClick',
+    objective: 'Dominar la cadencia rápida del doble clic y el uso del botón derecho para desplegar menús contextuales.',
+    controls: ['Doble clic izquierdo rápido (2 toques)', 'Clic derecho (menú contextual)'],
+    howToPlay: [
+      'Cuando veas una Cápsula Amarilla: haz dos toques rápidos consecutivos con el botón izquierdo sin mover el ratón.',
+      'Cuando veas una Baliza Azul: presiona el botón derecho del ratón para abrir el menú.',
+      'Haz clic izquierdo sobre la opción "Desbloquear acceso" para confirmar la acción.',
+    ],
+    proTip: 'Para el doble clic, mantén la mano quieta sobre la mesa y presiona únicamente con la yema del dedo índice con ritmo constante.',
   },
   {
     id: 'drag-drop',
@@ -27,6 +43,14 @@ export const MODULES: ModuleDefinition[] = [
     category: 'Manipulación',
     description: 'Mantén presionado el botón primario mientras mueves objetos y suéltalos dentro de sus receptores asignados.',
     iconName: 'Hand',
+    objective: 'Aprender a mantener presionado el botón principal mientras se trasladan elementos a sus zonas receptoras.',
+    controls: ['Mantener pulsado clic izquierdo', 'Desplazamiento y soltado'],
+    howToPlay: [
+      'Sitúa el cursor sobre la figura geométrica situada a la izquierda.',
+      'Presiona el botón izquierdo del ratón y MANTENLO presionado sin soltarlo.',
+      'Mueve el ratón para llevar la figura hasta el receptor punteado de la derecha y suelta el botón cuando encaje.',
+    ],
+    proTip: 'No sueltes el botón antes de tiempo; espera a que la figura esté dentro del receptor antes de levantar el dedo.',
   },
   {
     id: 'scroll-vault',
@@ -34,8 +58,16 @@ export const MODULES: ModuleDefinition[] = [
     title: 'Navegación y Scroll',
     shortName: 'Rueda / Scroll',
     category: 'Navegación',
-    description: 'Aprende a usar la rueda del ratón con suavidad y frena con precisión en la retícula indicada.',
+    description: 'Usa la rueda para alinear cada caja en el visor central y haz clic sobre ella para capturarla.',
     iconName: 'ArrowUpDown',
+    objective: 'Controlar el desplazamiento vertical con la rueda del ratón y capturar cada nodo haciendo clic directo sobre la caja alineada.',
+    controls: ['Girar rueda del ratón (Scroll)', 'Clic izquierdo sobre la caja alineada'],
+    howToPlay: [
+      'Gira la rueda del ratón hacia arriba o abajo guiándote con las flechas indicadoras.',
+      'Desplaza la pista hasta que el nodo quede centrado exactamente en el visor azul central.',
+      'Cuando la caja se ilumine y muestre "¡PULSA PARA CAPTURAR!", haz clic izquierdo sobre la caja para asegurarla.',
+    ],
+    proTip: 'Gira la rueda con movimientos controlados del dedo índice; si te pasas de largo, gira en sentido contrario y luego haz clic.',
   },
   {
     id: 'box-select',
@@ -45,6 +77,14 @@ export const MODULES: ModuleDefinition[] = [
     category: 'Productividad',
     description: 'Crea áreas de selección rectangulares (rubber-band) para atrapar gemas válidas sin tocar obstáculos.',
     iconName: 'SquareDashed',
+    objective: 'Aprender a seleccionar múltiples elementos trazando un recuadro rectangular de selección (rubber-band).',
+    controls: ['Clic y arrastrar recuadro en diagonal', 'Soltar para validar selección'],
+    howToPlay: [
+      'Haz clic en una zona despejada cercana al grupo de gemas y mantén presionado el botón.',
+      'Arrastra el cursor en diagonal para expandir una caja de selección que rodee todas las gemas azules.',
+      'Evita atrapar los triángulos rojos de peligro y suelta el botón del ratón para capturar.',
+    ],
+    proTip: 'Inicia el trazo desde una esquina exterior para que el recuadro abarque con holgura todas las gemas.',
   },
   {
     id: 'fluid-path',
@@ -54,5 +94,13 @@ export const MODULES: ModuleDefinition[] = [
     category: 'Destreza Fina',
     description: 'Conduce el puntero por curvas y laberintos sin tocar las paredes para desarrollar una mano firme y sin temblores.',
     iconName: 'Spline',
+    objective: 'Guiar el cursor a lo largo de un canal continuo con curvas sin tocar los bordes, entrenando velocidad constante y pulso.',
+    controls: ['Desplazamiento suave y continuo (sin clics)'],
+    howToPlay: [
+      'Pasa el cursor por el círculo azul de INICIO para activar el trayecto.',
+      'Desplaza el cursor suavemente a través del carril blanco sin rozar los márgenes.',
+      'Llega a la bandera verde de META para completar la vuelta con la mayor puntuación.',
+    ],
+    proTip: 'Respira con tranquilidad y mantén una velocidad moderada y constante para evitar tirones bruscos.',
   },
 ];

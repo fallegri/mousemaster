@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { tracker } from '../../utils/motionTracker';
 import { sound } from '../../utils/sound';
 import { ExerciseMetrics } from '../../types';
-import { Crosshair, CheckCircle2, ArrowDown, ArrowUp, Zap, PauseCircle } from 'lucide-react';
+import { Crosshair, CheckCircle2, ArrowDown, ArrowUp, MousePointerClick, AlertCircle } from 'lucide-react';
 
 interface Checkpoint {
   id: number;
@@ -25,32 +25,26 @@ export const ScrollVaultExercise: React.FC<Props> = ({
   onLiveUpdate,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
 
   const totalCheckpointsGoal = mode === 'campaign' ? 5 : 8;
   const [currentCheckpointIndex, setCurrentCheckpointIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [scrollY, setScrollY] = useState(0);
-  const [lockProgress, setLockProgress] = useState(0); // 0 - 100%
-  const [isStationary, setIsStationary] = useState(false);
   const [directionHint, setDirectionHint] = useState<'down' | 'up' | 'aligned'>('down');
   const [distancePixels, setDistancePixels] = useState(0);
+  const [floatingFeedback, setFloatingFeedback] = useState<string | null>(null);
 
   const startTimeRef = useRef(performance.now());
-  const lastWheelTimeRef = useRef(0);
   const scrollYRef = useRef(0);
-  const holdTimeRef = useRef(0);
   const animFrameRef = useRef<number | null>(null);
 
   // Spacing between node centers in pixels
   const nodeHeight = 84;
-  const nodeGap = 110;
-  const stepDistance = nodeHeight + nodeGap; // ~194px per node
+  const nodeGap = 120;
+  const stepDistance = nodeHeight + nodeGap; // ~204px per node
 
   // Alignment tolerance: tighter for higher difficulty
-  const tolerance = Math.max(22, Math.round(44 / Math.sqrt(difficultyFactor)));
-  // Required pause hold time: ~700ms - 900ms
-  const requiredHoldTimeMs = Math.round(750 * Math.sqrt(difficultyFactor));
+  const tolerance = Math.max(26, Math.round(48 / Math.sqrt(difficultyFactor)));
 
   // Generate checkpoints list
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>(() => {
@@ -80,9 +74,7 @@ export const ScrollVaultExercise: React.FC<Props> = ({
     setScore(0);
     setScrollY(0);
     scrollYRef.current = 0;
-    setLockProgress(0);
-    holdTimeRef.current = 0;
-    lastWheelTimeRef.current = 0;
+    setFloatingFeedback(null);
 
     setCheckpoints((prev) => prev.map((c) => ({ ...c, isLocked: false })));
   }, [difficultyFactor, mode]);
@@ -96,8 +88,6 @@ export const ScrollVaultExercise: React.FC<Props> = ({
       // Prevent browser from scrolling the window or document
       e.preventDefault();
       e.stopPropagation();
-
-      lastWheelTimeRef.current = performance.now();
 
       // Normalize delta across browsers/trackpads
       let delta = e.deltaY;
@@ -119,55 +109,25 @@ export const ScrollVaultExercise: React.FC<Props> = ({
     };
   }, [maxScroll]);
 
-  // Main evaluation and pause detection loop (running at 60fps)
+  // Alignment evaluation loop (running at 60fps)
   useEffect(() => {
-    let lastLoopTime = performance.now();
-
-    const loop = (now: number) => {
-      const dt = now - lastLoopTime;
-      lastLoopTime = now;
-
+    const loop = () => {
       if (currentCheckpointIndex < totalCheckpointsGoal) {
-        // Target scroll position where the current node is exactly centered in the reticle
+        // Target scroll position where the current node is centered in the reticle
         const targetScrollY = currentCheckpointIndex * stepDistance;
         const currentPos = scrollYRef.current;
         const diff = currentPos - targetScrollY;
         const absDistance = Math.round(Math.abs(diff));
         setDistancePixels(absDistance);
 
-        // Check if cursor wheel is stationary (no wheel event within last 130ms)
-        const stationary = now - lastWheelTimeRef.current > 130;
-        setIsStationary(stationary);
-
         if (absDistance <= tolerance) {
           // Inside the reticle!
           setDirectionHint('aligned');
-
-          if (stationary) {
-            // User is holding still inside the target! Increment hold progress
-            holdTimeRef.current += dt;
-            const progress = Math.min(100, Math.round((holdTimeRef.current / requiredHoldTimeMs) * 100));
-            setLockProgress(progress);
-
-            if (progress >= 100) {
-              // Successfully locked!
-              handleLockSuccess();
-            }
-          } else {
-            // User is moving within the reticle, slow down or hold still
-            holdTimeRef.current = Math.max(0, holdTimeRef.current - dt * 0.5);
-            setLockProgress(Math.round((holdTimeRef.current / requiredHoldTimeMs) * 100));
-          }
         } else {
           // Outside the reticle
-          holdTimeRef.current = 0;
-          setLockProgress(0);
-
           if (diff < 0) {
-            // Current scroll is less than target: need to scroll DOWN
             setDirectionHint('down');
           } else {
-            // Current scroll is greater than target: need to scroll UP
             setDirectionHint('up');
           }
         }
@@ -180,45 +140,76 @@ export const ScrollVaultExercise: React.FC<Props> = ({
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [currentCheckpointIndex, totalCheckpointsGoal, tolerance, requiredHoldTimeMs, stepDistance]);
+  }, [currentCheckpointIndex, totalCheckpointsGoal, tolerance, stepDistance]);
 
-  const handleLockSuccess = () => {
-    sound.playHit(1.2);
-    sound.playSnap();
-    tracker.registerTargetHit();
+  // Handle click on a checkpoint box
+  const handleCheckpointClick = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
 
-    const nextScore = score + 100;
-    setScore(nextScore);
-    holdTimeRef.current = 0;
-    setLockProgress(0);
-
-    setCheckpoints((prev) =>
-      prev.map((c, idx) => (idx === currentCheckpointIndex ? { ...c, isLocked: true } : c))
-    );
-
-    const nextIdx = currentCheckpointIndex + 1;
-    setCurrentCheckpointIndex(nextIdx);
-
-    if (onLiveUpdate) {
-      onLiveUpdate({ current: nextIdx, total: totalCheckpointsGoal, score: nextScore });
+    if (idx !== currentCheckpointIndex) {
+      // User clicked an inactive or already completed checkpoint
+      sound.playMiss();
+      tracker.registerMissedClick();
+      showToast('Ese no es el nodo activo actual.');
+      return;
     }
 
-    if (nextIdx >= totalCheckpointsGoal) {
-      const durationSeconds = (performance.now() - startTimeRef.current) / 1000;
-      const summary = tracker.getSummary(
-        totalCheckpointsGoal,
-        totalCheckpointsGoal,
-        durationSeconds,
-        difficultyFactor
+    // Check if current checkpoint is within alignment tolerance
+    const targetScrollY = currentCheckpointIndex * stepDistance;
+    const currentPos = scrollYRef.current;
+    const absDistance = Math.abs(currentPos - targetScrollY);
+
+    if (absDistance <= tolerance) {
+      // SUCCESSFUL CLICK on aligned box!
+      sound.playHit(1.3);
+      sound.playSnap();
+      tracker.registerTargetHit();
+
+      const nextScore = score + 100;
+      setScore(nextScore);
+
+      setCheckpoints((prev) =>
+        prev.map((c, i) => (i === currentCheckpointIndex ? { ...c, isLocked: true } : c))
       );
-      onComplete({
-        moduleName: 'scroll-vault',
-        moduleTitle: 'Navegación y Scroll',
-        mode,
-        score: nextScore,
-        ...summary,
-      });
+
+      showToast('¡Nodo capturado con éxito! +100 pts');
+
+      const nextIdx = currentCheckpointIndex + 1;
+      setCurrentCheckpointIndex(nextIdx);
+
+      if (onLiveUpdate) {
+        onLiveUpdate({ current: nextIdx, total: totalCheckpointsGoal, score: nextScore });
+      }
+
+      if (nextIdx >= totalCheckpointsGoal) {
+        const durationSeconds = (performance.now() - startTimeRef.current) / 1000;
+        const summary = tracker.getSummary(
+          totalCheckpointsGoal,
+          totalCheckpointsGoal,
+          durationSeconds,
+          difficultyFactor
+        );
+        onComplete({
+          moduleName: 'scroll-vault',
+          moduleTitle: 'Navegación y Scroll',
+          mode,
+          score: nextScore,
+          ...summary,
+        });
+      }
+    } else {
+      // Clicked while outside the reticle
+      sound.playMiss();
+      tracker.registerMissedClick();
+      showToast('¡Alinea primero la caja dentro del visor azul central antes de hacer clic!');
     }
+  };
+
+  const showToast = (msg: string) => {
+    setFloatingFeedback(msg);
+    setTimeout(() => {
+      setFloatingFeedback((prev) => (prev === msg ? null : prev));
+    }, 2200);
   };
 
   return (
@@ -226,36 +217,42 @@ export const ScrollVaultExercise: React.FC<Props> = ({
       ref={containerRef}
       className="relative w-full h-full max-h-full bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden select-none flex flex-col justify-between p-3 sm:p-4 text-white"
     >
-      {/* Top Banner & Telemetry */}
+      {/* Top Banner & Status */}
       <div className="z-30 flex items-center justify-between text-xs gap-3 shrink-0">
         <div className="flex items-center gap-2 bg-slate-800/90 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-700 shadow-xs">
-          <span className="font-semibold text-slate-300">Misión:</span>
+          <span className="font-semibold text-slate-300">Paso 1:</span>
           <span className="text-slate-100 font-medium">
-            Gira la rueda del ratón y mantén quieto 1 segundo en el visor ({Math.min(currentCheckpointIndex + 1, totalCheckpointsGoal)}/{totalCheckpointsGoal})
+            Gira la rueda hasta centrar la caja en el visor.
+          </span>
+          <span className="font-semibold text-amber-400 pl-2 border-l border-slate-700">Paso 2:</span>
+          <span className="text-amber-200 font-medium">
+            ¡Haz clic sobre la caja! ({Math.min(currentCheckpointIndex + 1, totalCheckpointsGoal)}/{totalCheckpointsGoal})
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Target distance indicator */}
-          <div className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border flex items-center gap-1.5 transition-colors ${
-            directionHint === 'aligned'
-              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 animate-pulse'
-              : 'bg-slate-800 border-slate-700 text-slate-300'
-          }`}>
+          {/* Alignment status indicator */}
+          <div
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-1.5 transition-all ${
+              directionHint === 'aligned'
+                ? 'bg-emerald-500 border-emerald-400 text-slate-950 font-bold scale-105 shadow-md animate-pulse'
+                : 'bg-slate-800 border-slate-700 text-slate-300'
+            }`}
+          >
             {directionHint === 'aligned' ? (
               <>
-                <PauseCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span>¡EN EL VISOR! Mantén quieto</span>
+                <MousePointerClick className="w-4 h-4 text-slate-950" />
+                <span>🎯 ¡ALINEADO! Haz clic en la caja</span>
               </>
             ) : directionHint === 'down' ? (
               <>
                 <ArrowDown className="w-3.5 h-3.5 text-indigo-400 animate-bounce" />
-                <span>Gira hacia ABAJO ({distancePixels}px)</span>
+                <span>Rueda hacia ABAJO ({distancePixels}px)</span>
               </>
             ) : (
               <>
                 <ArrowUp className="w-3.5 h-3.5 text-indigo-400 animate-bounce" />
-                <span>Gira hacia ARRIBA ({distancePixels}px)</span>
+                <span>Rueda hacia ARRIBA ({distancePixels}px)</span>
               </>
             )}
           </div>
@@ -266,7 +263,7 @@ export const ScrollVaultExercise: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Main Interactive Scroll Chamber Area */}
+      {/* Main Interactive Scroll Chamber */}
       <div className="relative flex-1 w-full min-h-0 my-2 rounded-xl border border-slate-800 bg-slate-950/70 overflow-hidden flex items-center justify-center">
         {/* Subtle grid backdrop */}
         <div
@@ -279,92 +276,61 @@ export const ScrollVaultExercise: React.FC<Props> = ({
         />
 
         {/* Fixed Center Alignment Viewfinder (Reticle) */}
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-28 pointer-events-none z-20 flex items-center justify-between px-4 sm:px-8 border-y-2 border-indigo-500 bg-indigo-500/10 backdrop-blur-[2px]">
+        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-28 pointer-events-none z-10 flex items-center justify-between px-4 sm:px-8 border-y-2 border-indigo-500 bg-indigo-500/10 backdrop-blur-[1px]">
           {/* Left laser marker */}
           <div className="flex items-center gap-2 text-indigo-300 font-bold text-xs tracking-wider">
             <Crosshair className="w-5 h-5 text-indigo-400 animate-spin" style={{ animationDuration: '10s' }} />
-            <span className="hidden sm:inline">VISOR CENTRAL DE ALINEACIÓN</span>
+            <span className="hidden sm:inline">VISOR CENTRAL DE CAPTURA</span>
           </div>
 
           {/* Central crosshair ticks */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
             <div className="w-12 h-0.5 bg-indigo-400/80" />
             <div className="w-0.5 h-12 bg-indigo-400/80 absolute" />
-            <div className={`w-8 h-8 rounded-full border border-indigo-400/60 transition-transform ${
-              directionHint === 'aligned' ? 'scale-125 border-emerald-400' : ''
-            }`} />
+            <div
+              className={`w-10 h-10 rounded-full border border-indigo-400/60 transition-transform ${
+                directionHint === 'aligned' ? 'scale-125 border-emerald-400 ring-2 ring-emerald-400/50' : ''
+              }`}
+            />
           </div>
 
-          {/* Right Pause / Hold-in Progress Ring */}
-          <div className="flex items-center gap-3">
-            {directionHint === 'aligned' ? (
-              <div className="flex items-center gap-2 bg-emerald-950/80 px-3 py-1.5 rounded-xl border border-emerald-500/50">
-                <div className="relative w-7 h-7 flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle
-                      cx="14"
-                      cy="14"
-                      r="11"
-                      stroke="#065f46"
-                      strokeWidth="3"
-                      fill="transparent"
-                    />
-                    <circle
-                      cx="14"
-                      cy="14"
-                      r="11"
-                      stroke="#10b981"
-                      strokeWidth="3"
-                      fill="transparent"
-                      strokeDasharray={69.1}
-                      strokeDashoffset={69.1 - (69.1 * lockProgress) / 100}
-                      className="transition-all duration-75"
-                    />
-                  </svg>
-                  <span className="absolute text-[9px] font-bold text-emerald-300">{lockProgress}%</span>
-                </div>
-                <div className="text-left">
-                  <span className="block text-[10px] font-semibold text-emerald-400 leading-tight">
-                    {isStationary ? 'Fijando nodo...' : '¡No muevas la rueda!'}
-                  </span>
-                  <span className="block text-[9px] text-emerald-200/70">
-                    {isStationary ? 'Mantén quieto' : 'Detén el giro'}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="hidden sm:inline">Usa la rueda</span>
-              </div>
-            )}
+          {/* Right Status */}
+          <div className="text-right">
+            <span className="block text-[11px] font-semibold text-indigo-300">
+              {directionHint === 'aligned' ? '¡LISTO PARA CLIC!' : 'DESPLAZANDO...'}
+            </span>
+            <span className="block text-[10px] text-slate-400">Tolerancia: ±{tolerance}px</span>
           </div>
         </div>
 
         {/* Vertically Scrolling Conveyor Belt containing all Checkpoints */}
         <div
-          ref={trackRef}
           style={{
             transform: `translateY(${-scrollY}px)`,
             transition: 'transform 0.08s ease-out',
           }}
-          className="absolute inset-x-0 top-1/2 w-full max-w-lg mx-auto flex flex-col items-center pointer-events-none"
+          className="absolute inset-x-0 top-1/2 w-full max-w-lg mx-auto flex flex-col items-center z-20"
         >
           {checkpoints.map((cp, idx) => {
             const isCurrent = idx === currentCheckpointIndex;
+            const isAligned = isCurrent && directionHint === 'aligned';
+
             return (
               <div
                 key={cp.id}
+                onClick={(e) => handleCheckpointClick(idx, e)}
                 style={{
                   height: `${nodeHeight}px`,
                   marginBottom: idx === checkpoints.length - 1 ? '0px' : `${nodeGap}px`,
                 }}
-                className={`w-11/12 max-w-md rounded-2xl border-2 px-5 py-3 flex items-center justify-between shadow-lg transition-all duration-150 ${
+                className={`w-11/12 max-w-md rounded-2xl border-2 px-5 py-3 flex items-center justify-between shadow-lg transition-all duration-150 select-none ${
                   cp.isLocked
-                    ? 'border-emerald-500/60 bg-emerald-950/70 text-emerald-200'
+                    ? 'border-emerald-500/60 bg-emerald-950/70 text-emerald-200 cursor-default opacity-60'
+                    : isAligned
+                    ? 'border-emerald-400 bg-emerald-900/90 text-white scale-105 ring-4 ring-emerald-400/50 shadow-emerald-500/30 cursor-pointer animate-pulse'
                     : isCurrent
-                    ? 'border-indigo-400 bg-indigo-950/90 text-white scale-105 ring-4 ring-indigo-500/20'
-                    : 'border-slate-800 bg-slate-900/60 text-slate-400 opacity-50'
+                    ? 'border-indigo-400 bg-indigo-950/90 text-white shadow-indigo-500/20 cursor-pointer'
+                    : 'border-slate-800 bg-slate-900/60 text-slate-400 opacity-40 cursor-not-allowed'
                 }`}
               >
                 <div className="flex items-center gap-3.5">
@@ -376,21 +342,39 @@ export const ScrollVaultExercise: React.FC<Props> = ({
                   <div>
                     <div className="font-bold text-sm tracking-wide">{cp.label}</div>
                     <div className="text-[11px] text-slate-400">
-                      {cp.isLocked
-                        ? '✓ Alineado y confirmado'
-                        : isCurrent
-                        ? '<< OBJETIVO ACTIVO - ALINEAR EN VISOR >>'
-                        : 'En espera en la secuencia'}
+                      {cp.isLocked ? (
+                        '✓ Capturado con éxito'
+                      ) : isAligned ? (
+                        <span className="text-emerald-300 font-bold flex items-center gap-1">
+                          <MousePointerClick className="w-3.5 h-3.5 animate-bounce" />
+                          ¡HAZ CLIC AQUÍ AHORA!
+                        </span>
+                      ) : isCurrent ? (
+                        'Gira la rueda hasta el centro'
+                      ) : (
+                        'Siguiente en la lista'
+                      )}
                     </div>
                   </div>
                 </div>
 
+                {/* Right Action Badge inside the Card */}
                 {cp.isLocked ? (
                   <div className="bg-emerald-500 text-slate-950 rounded-full p-1.5 shadow-md">
                     <CheckCircle2 className="w-5 h-5 font-bold" />
                   </div>
+                ) : isAligned ? (
+                  <button
+                    onClick={(e) => handleCheckpointClick(idx, e)}
+                    className="px-3 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1 animate-bounce"
+                  >
+                    <MousePointerClick className="w-3.5 h-3.5" />
+                    <span>CAPTURAR</span>
+                  </button>
                 ) : isCurrent ? (
-                  <div className="w-3 h-3 rounded-full bg-indigo-400 animate-ping" />
+                  <div className="text-[11px] font-semibold text-indigo-400 px-2.5 py-1 bg-indigo-950/60 border border-indigo-800 rounded-lg">
+                    Alinear
+                  </div>
                 ) : null}
               </div>
             );
@@ -416,12 +400,23 @@ export const ScrollVaultExercise: React.FC<Props> = ({
             );
           })}
         </div>
+
+        {/* Floating Feedback Notice */}
+        {floatingFeedback && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-2xl border border-slate-700 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>{floatingFeedback}</span>
+          </div>
+        )}
       </div>
 
       {/* Footer Instructions with clear guidance */}
       <div className="z-30 text-center text-xs text-slate-400 shrink-0 flex items-center justify-center gap-3">
-        <span className="bg-slate-800/80 px-3 py-1 rounded-lg border border-slate-700 text-slate-300">
-          💡 <strong>Cómo jugar:</strong> Gira la rueda hacia arriba o abajo hasta que el nodo quede en el visor azul central, luego <strong>detén la mano por 1 segundo</strong> para fijar.
+        <span className="bg-slate-800/80 px-3 py-1 rounded-lg border border-slate-700 text-slate-300 flex items-center gap-2">
+          <span>💡</span>
+          <span>
+            <strong>Instrucción activa:</strong> Gira la rueda del ratón hasta que la caja quede en el centro, y luego <strong>haz clic izquierdo sobre la caja</strong> para capturarla.
+          </span>
         </span>
       </div>
     </div>
