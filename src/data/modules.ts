@@ -1,0 +1,58 @@
+import { ModuleDefinition } from '../types';
+
+export const MODULES: ModuleDefinition[] = [
+  {
+    id: 'target-click',
+    levelNumber: 1,
+    title: 'Movimiento y Puntería',
+    shortName: 'Puntería',
+    category: 'Fundamentos',
+    description: 'Desplaza el cursor hacia los objetivos estáticos y móviles. Golpea el centro para obtener máxima puntuación.',
+    iconName: 'Crosshair',
+  },
+  {
+    id: 'action-clicks',
+    levelNumber: 2,
+    title: 'Doble Clic y Clic Secuencial',
+    shortName: 'Doble Clic',
+    category: 'Acciones Rápidas',
+    description: 'Entrena la cadencia rítmica de dos toques seguidos sin desplazar el mouse y activa menús contextuales.',
+    iconName: 'MousePointerClick',
+  },
+  {
+    id: 'drag-drop',
+    levelNumber: 3,
+    title: 'Arrastrar y Soltar',
+    shortName: 'Arrastre',
+    category: 'Manipulación',
+    description: 'Mantén presionado el botón primario mientras mueves objetos y suéltalos dentro de sus receptores asignados.',
+    iconName: 'Hand',
+  },
+  {
+    id: 'scroll-vault',
+    levelNumber: 4,
+    title: 'Navegación y Scroll',
+    shortName: 'Rueda / Scroll',
+    category: 'Navegación',
+    description: 'Aprende a usar la rueda del ratón con suavidad y frena con precisión en la retícula indicada.',
+    iconName: 'ArrowUpDown',
+  },
+  {
+    id: 'box-select',
+    levelNumber: 5,
+    title: 'Selección por Caja y Lazo',
+    shortName: 'Selección',
+    category: 'Productividad',
+    description: 'Crea áreas de selección rectangulares (rubber-band) para atrapar gemas válidas sin tocar obstáculos.',
+    iconName: 'SquareDashed',
+  },
+  {
+    id: 'fluid-path',
+    levelNumber: 6,
+    title: 'Movimiento Fluido y Trazo',
+    shortName: 'Trazo Fluido',
+    category: 'Destreza Fina',
+    description: 'Conduce el puntero por curvas y laberintos sin tocar las paredes para desarrollar una mano firme y sin temblores.',
+    iconName: 'Spline',
+  },
+];

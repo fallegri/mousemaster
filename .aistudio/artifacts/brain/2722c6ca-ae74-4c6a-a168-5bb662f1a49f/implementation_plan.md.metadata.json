@@ -1,0 +1,6 @@
+{
+  "summary": "Plan de implementación completo para MouseMaster, una aplicación web interactiva y gamificada para el aprendizaje y entrenamiento de destrezas con el ratón (movimiento general, clic/doble clic, arrastrar y soltar, scroll, selección por caja/lazo y movimiento fluido continuo) con análisis biomecánico en tiempo real, ajuste dinámico de dificultad y retroalimentación inteligente vía Nvidia NIM (incluyendo nvidia/nemotron-3.5-lightning-30b-a3b), Gemini y motor heurístico local.",
+  "updatedAt": "2026-10-19T14:55:59.562036137Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

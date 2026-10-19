@@ -1,0 +1,6 @@
+{
+  "name": "MouseMaster - Entrenador Interactivo del Ratón con IA",
+  "description": "Aprende y perfecciona el uso del mouse con ejercicios interactivos, feedback en tiempo real, calibración adaptativa y sugerencias inteligentes con IA de Nvidia y Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
