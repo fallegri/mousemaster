@@ -278,7 +278,7 @@ export const DragDropExercise: React.FC<Props> = ({
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      className="relative w-full h-full min-h-[480px] bg-slate-100/70 border border-slate-200 rounded-2xl overflow-hidden select-none flex flex-col justify-between p-4"
+      className="relative w-full h-full max-h-full bg-slate-100/70 border border-slate-200 rounded-2xl overflow-hidden select-none flex flex-col justify-between p-3 sm:p-4"
     >
       {/* Top Banner */}
       <div className="z-10 flex items-center justify-between text-xs text-slate-500 pointer-events-none">

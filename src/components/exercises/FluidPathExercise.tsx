@@ -196,7 +196,7 @@ export const FluidPathExercise: React.FC<Props> = ({
     <div
       ref={containerRef}
       onPointerMove={handlePointerMove}
-      className={`relative w-full h-full min-h-[480px] border border-slate-200 rounded-2xl overflow-hidden select-none flex flex-col justify-between p-4 cursor-none transition-colors ${
+      className={`relative w-full h-full max-h-full border border-slate-200 rounded-2xl overflow-hidden select-none flex flex-col justify-between p-3 sm:p-4 cursor-none transition-colors ${
         isColliding ? 'bg-red-50/60' : 'bg-slate-100/70'
       }`}
     >

@@ -262,7 +262,9 @@ export default function App() {
   const activeModuleDef = MODULES.find((m) => m.id === activeModuleId);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className={`bg-slate-50 text-slate-900 flex flex-col font-sans select-none ${
+      activeModuleId ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen'
+    }`}>
       {/* Top Header */}
       <Header
         activeTab={activeTab}
@@ -283,10 +285,10 @@ export default function App() {
       />
 
       {/* Main Content Arena */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {activeModuleId && activeModuleDef ? (
           /* Active Workout Stage */
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             <HUD
               moduleTitle={activeModuleDef.title}
               levelNumber={activeModuleDef.levelNumber}
@@ -296,7 +298,7 @@ export default function App() {
               liveStats={liveStats}
             />
 
-            <div className="flex-1 p-4 md:p-6 flex items-center justify-center max-w-6xl w-full mx-auto">
+            <div className="flex-1 min-h-0 overflow-hidden p-2 sm:p-4 flex items-center justify-center max-w-6xl w-full mx-auto">
               {activeModuleId === 'target-click' && (
                 <TargetClickExercise
                   key={exerciseKey}
@@ -355,7 +357,7 @@ export default function App() {
           </div>
         ) : (
           /* Navigation Views */
-          <div className="flex-1 p-4 md:p-8">
+          <div className="flex-1 overflow-y-auto p-4 md:p-8">
             {activeTab === 'campaign' && (
               <CampaignView
                 modulesProgress={modulesProgress}
