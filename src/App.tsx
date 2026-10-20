@@ -4,7 +4,16 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { ModuleId, ModuleProgress, PersonalRecord, UserSettings, ExerciseMetrics, UserProfile } from './types';
+import {
+  ModuleId,
+  ModuleProgress,
+  PersonalRecord,
+  UserSettings,
+  ExerciseMetrics,
+  UserProfile,
+  MainAppMode,
+  KeyboardScoreSummary,
+} from './types';
 import { MODULES } from './data/modules';
 import { sound } from './utils/sound';
 import { Header } from './components/Header';
@@ -17,6 +26,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { CompletionModal } from './components/CompletionModal';
 import { RestorePracticeModal } from './components/RestorePracticeModal';
 import { MissionBriefingModal } from './components/MissionBriefingModal';
+import { KeyboardHub } from './components/keyboard/KeyboardHub';
 import { CheckCircle2 } from 'lucide-react';
 
 // Exercise Components
@@ -32,6 +42,8 @@ const STORAGE_KEY_RECORDS = 'mousemaster_records';
 const STORAGE_KEY_SETTINGS = 'mousemaster_settings';
 const STORAGE_KEY_DIFFICULTY = 'mousemaster_difficulty';
 const STORAGE_KEY_USER = 'mousemaster_user_profile';
+const STORAGE_KEY_MAIN_MODE = 'mousemaster_main_mode';
+const STORAGE_KEY_KEYBOARD_RECORDS = 'mousemaster_keyboard_records';
 
 const defaultSettings: UserSettings = {
   aiProvider: 'nvidia',
@@ -52,6 +64,14 @@ const initialModulesProgress: Record<ModuleId, ModuleProgress> = {
 };
 
 export default function App() {
+  const [mainAppMode, setMainAppMode] = useState<MainAppMode>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_MAIN_MODE);
+      if (saved === 'keyboard' || saved === 'mouse') return saved;
+    } catch {}
+    return 'mouse';
+  });
+
   const [activeTab, setActiveTab] = useState<'campaign' | 'free_practice' | 'records' | 'coach'>('campaign');
   const [activeModuleId, setActiveModuleId] = useState<ModuleId | null>(null);
   const [activeMode, setActiveMode] = useState<'campaign' | 'free_practice'>('campaign');
@@ -63,7 +83,7 @@ export default function App() {
   const [liveStats, setLiveStats] = useState<{ current: number; total: number; score: number } | undefined>(undefined);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Mission Briefing States (indica qué desafío viene y cómo se juega)
+  // Mission Briefing States
   const [pendingModuleId, setPendingModuleId] = useState<ModuleId | null>(null);
   const [pendingMode, setPendingMode] = useState<'campaign' | 'free_practice'>('campaign');
   const [isNextMissionFlow, setIsNextMissionFlow] = useState(false);
@@ -91,7 +111,7 @@ export default function App() {
     return defaultSettings;
   });
 
-  // Module Progress
+  // Module Progress for Mouse
   const [modulesProgress, setModulesProgress] = useState<Record<ModuleId, ModuleProgress>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_PROGRESS);
@@ -100,13 +120,24 @@ export default function App() {
     return initialModulesProgress;
   });
 
-  // Personal Records
+  // Personal Records for Mouse
   const [records, setRecords] = useState<Record<ModuleId, PersonalRecord | undefined>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_RECORDS);
       if (saved) return JSON.parse(saved);
     } catch {}
     return {} as any;
+  });
+
+  // Keyboard Records
+  const [keyboardRecords, setKeyboardRecords] = useState<
+    Record<string, { score: number; stars: number; maxCombo: number; accuracy: number; date: string }>
+  >(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_KEYBOARD_RECORDS);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
   });
 
   // Difficulty Factor
@@ -121,6 +152,39 @@ export default function App() {
   useEffect(() => {
     sound.enabled = userSettings.soundEnabled;
   }, [userSettings.soundEnabled]);
+
+  const handleSelectMainMode = (mode: MainAppMode) => {
+    sound.playClick(700);
+    setMainAppMode(mode);
+    setActiveModuleId(null);
+    setCompletionMetrics(null);
+    try {
+      localStorage.setItem(STORAGE_KEY_MAIN_MODE, mode);
+    } catch {}
+  };
+
+  const handleSaveKeyboardRecord = (summary: KeyboardScoreSummary) => {
+    setKeyboardRecords((prev) => {
+      const current = prev[summary.songId];
+      if (!current || summary.score > current.score) {
+        const nextMap = {
+          ...prev,
+          [summary.songId]: {
+            score: summary.score,
+            stars: Math.max(current?.stars || 0, summary.stars),
+            maxCombo: Math.max(current?.maxCombo || 0, summary.maxCombo),
+            accuracy: Math.max(current?.accuracy || 0, summary.accuracy),
+            date: new Date().toLocaleDateString(),
+          },
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY_KEYBOARD_RECORDS, JSON.stringify(nextMap));
+        } catch {}
+        return nextMap;
+      }
+      return prev;
+    });
+  };
 
   // Persist settings
   const handleSaveSettings = (newSettings: UserSettings) => {
@@ -140,7 +204,11 @@ export default function App() {
   };
 
   // Request module start (shows mission briefing with instructions first)
-  const handleRequestStartModule = (moduleId: ModuleId, mode: 'campaign' | 'free_practice' = 'campaign', isNext: boolean = false) => {
+  const handleRequestStartModule = (
+    moduleId: ModuleId,
+    mode: 'campaign' | 'free_practice' = 'campaign',
+    isNext: boolean = false
+  ) => {
     sound.playClick(650);
     setPendingModuleId(moduleId);
     setPendingMode(mode);
@@ -159,23 +227,19 @@ export default function App() {
     setExerciseKey((prev) => prev + 1);
   };
 
-  // Direct start for retries
-  const handleStartModuleDirect = (moduleId: ModuleId, mode: 'campaign' | 'free_practice' = 'campaign') => {
-    sound.playClick(650);
-    setActiveModuleId(moduleId);
-    setActiveMode(mode);
-    setCompletionMetrics(null);
-    setLiveStats(undefined);
-    setExerciseKey((prev) => prev + 1);
-  };
-
   // Exercise completed handler
   const handleExerciseComplete = (metrics: ExerciseMetrics) => {
     const moduleId = metrics.moduleName as ModuleId;
 
     // Update Progress
     setModulesProgress((prev) => {
-      const current = prev[moduleId] || { stars: 0, completed: false, bestScore: 0, bestAccuracy: 0, timesPlayed: 0 };
+      const current = prev[moduleId] || {
+        stars: 0,
+        completed: false,
+        bestScore: 0,
+        bestAccuracy: 0,
+        timesPlayed: 0,
+      };
       const updated: ModuleProgress = {
         stars: Math.max(current.stars, metrics.stars),
         completed: true,
@@ -212,7 +276,7 @@ export default function App() {
     setCompletionMetrics(metrics);
   };
 
-  // Advance to next mission (opens briefing explaining next challenge and how to play)
+  // Advance to next mission
   const handleNextMission = () => {
     if (!activeModuleId) {
       setCompletionMetrics(null);
@@ -244,7 +308,7 @@ export default function App() {
     setCompletionMetrics(null);
   };
 
-  // Restore practice: Cleans all local records, resets progress and creates new user
+  // Restore practice: Cleans all local records (mouse + keyboard), resets progress and creates new user
   const handleConfirmRestorePractice = (newUserName: string) => {
     sound.playClick(400);
 
@@ -253,11 +317,13 @@ export default function App() {
       localStorage.removeItem(STORAGE_KEY_RECORDS);
       localStorage.removeItem(STORAGE_KEY_PROGRESS);
       localStorage.removeItem(STORAGE_KEY_DIFFICULTY);
+      localStorage.removeItem(STORAGE_KEY_KEYBOARD_RECORDS);
     } catch {}
 
     // 2. Reset progress state
     setModulesProgress({ ...initialModulesProgress });
     setRecords({} as any);
+    setKeyboardRecords({});
     setDifficultyFactor(1.0);
 
     // 3. Assume new user
@@ -286,15 +352,23 @@ export default function App() {
     }, 3500);
   };
 
-  const totalStars = Object.values(modulesProgress).reduce((acc, curr) => acc + curr.stars, 0);
+  // Total stars across both mouse missions and keyboard songs
+  const mouseStars = Object.values(modulesProgress).reduce((acc, curr) => acc + curr.stars, 0);
+  const keyboardStars = Object.values(keyboardRecords).reduce((acc, curr) => acc + (curr.stars || 0), 0);
+  const totalStars = mouseStars + keyboardStars;
+
   const activeModuleDef = MODULES.find((m) => m.id === activeModuleId);
 
   return (
-    <div className={`bg-slate-50 text-slate-900 flex flex-col font-sans select-none ${
-      activeModuleId ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen'
-    }`}>
-      {/* Top Header */}
+    <div
+      className={`bg-slate-50 text-slate-900 flex flex-col font-sans select-none ${
+        activeModuleId ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen'
+      }`}
+    >
+      {/* Top Header with Global Mode Switcher */}
       <Header
+        mainAppMode={mainAppMode}
+        onSelectMainMode={handleSelectMainMode}
         activeTab={activeTab}
         onSelectTab={(tab) => {
           setActiveTab(tab);
@@ -314,8 +388,21 @@ export default function App() {
 
       {/* Main Content Arena */}
       <main className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        {activeModuleId && activeModuleDef ? (
-          /* Active Workout Stage */
+        {mainAppMode === 'keyboard' ? (
+          /* Keyboard Practice Mode */
+          <div className="flex-1 overflow-y-auto bg-slate-950">
+            <KeyboardHub
+              userSettings={userSettings}
+              soundEnabled={userSettings.soundEnabled}
+              onToggleSound={() =>
+                handleSaveSettings({ ...userSettings, soundEnabled: !userSettings.soundEnabled })
+              }
+              keyboardRecords={keyboardRecords}
+              onSaveRecord={handleSaveKeyboardRecord}
+            />
+          </div>
+        ) : activeModuleId && activeModuleDef ? (
+          /* Active Mouse Workout Stage */
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
             <HUD
               moduleTitle={activeModuleDef.title}
@@ -384,12 +471,12 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* Navigation Views */
+          /* Mouse Navigation Views */
           <div className="flex-1 overflow-y-auto p-4 md:p-8">
             {activeTab === 'campaign' && (
               <CampaignView
                 modulesProgress={modulesProgress}
-                totalStars={totalStars}
+                totalStars={mouseStars}
                 onSelectModule={(id) => handleRequestStartModule(id, 'campaign', false)}
               />
             )}
@@ -420,7 +507,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Mission Briefing Modal (Indica previamente qué desafío viene y cómo se debe jugar) */}
+      {/* Mission Briefing Modal */}
       {isBriefingOpen && pendingModuleId && (
         <MissionBriefingModal
           module={MODULES.find((m) => m.id === pendingModuleId) || MODULES[0]}

@@ -1,6 +1,6 @@
 {
-  "summary": "Plan de implementación completo para MouseMaster, una aplicación web interactiva y gamificada para el aprendizaje y entrenamiento de destrezas con el ratón (movimiento general, clic/doble clic, arrastrar y soltar, scroll, selección por caja/lazo y movimiento fluido continuo) con análisis biomecánico en tiempo real, ajuste dinámico de dificultad y retroalimentación inteligente vía Nvidia NIM (incluyendo nvidia/nemotron-3.5-lightning-30b-a3b), Gemini y motor heurístico local.",
-  "updatedAt": "2026-10-19T14:55:59.562036137Z",
-  "requestFeedback": true,
-  "userFacing": true
+  "summary":  "Plan de implementación para la expansión de MouseMaster: incorporación de menú principal modular (Practicar Mouse / Practicar Teclado), juego de ritmo tipo Beatstar/Guitar Hero con notas descendentes sincronizadas con música libre de derechos y opción de subir canciones, seguido del modo de mecanografía interactiva estilo Mario Teaches Typing.",
+  "updatedAt":  "2026-10-20T17:54:46.631394361Z",
+  "requestFeedback":  true,
+  "userFacing":  true
 }

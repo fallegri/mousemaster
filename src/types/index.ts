@@ -73,9 +73,66 @@ export interface PersonalRecord {
   date: string;
 }
 
+export type MainAppMode = 'mouse' | 'keyboard';
+
 export interface UserProfile {
   name: string;
   userNumber: number;
   createdAt: string;
+}
+
+export type KeyboardSubMode = 'rhythm' | 'typing_adventure' | 'records';
+
+export interface RhythmNote {
+  id: string;
+  time: number; // in seconds
+  lane: number; // 0, 1, 2, 3
+  key: string;  // e.g. 'D', 'F', 'J', 'K'
+  duration?: number;
+  hit?: boolean;
+  judgement?: 'PERFECT' | 'GREAT' | 'GOOD' | 'MISS';
+}
+
+export interface KeyboardSong {
+  id: string;
+  title: string;
+  artist: string;
+  bpm: number;
+  duration: number; // in seconds
+  difficulty: 'easy' | 'normal' | 'hard';
+  genre: string;
+  coverGradient: string;
+  laneKeys: string[]; // default ['D', 'F', 'J', 'K']
+  audioSynthType: 'synthwave' | 'chiptune' | 'lofi' | 'techno' | 'custom';
+  customAudioUrl?: string;
+  notes: RhythmNote[];
+}
+
+export interface KeyboardScoreSummary {
+  songId: string;
+  songTitle: string;
+  score: number;
+  maxCombo: number;
+  accuracy: number;
+  stars: 0 | 1 | 2 | 3;
+  perfectCount: number;
+  greatCount: number;
+  goodCount: number;
+  missCount: number;
+  totalNotes: number;
+  wpm?: number;
+  mode: 'rhythm' | 'typing';
+}
+
+export interface TypingLesson {
+  id: string;
+  title: string;
+  level: number;
+  subtitle: string;
+  description: string;
+  keys: string[];
+  words: string[];
+  targetWpm: number;
+  minAccuracy: number;
 }
 

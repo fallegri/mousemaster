@@ -1,6 +1,6 @@
-# MouseMaster: Entrenador Interactivo de Habilidades del Ratón con IA
+# Plan de Implementación: Módulo de Aprendizaje de Teclado y Ritmo (TypeMaster + MouseMaster)
 
-Plataforma web gamificada y accesible para aprender y perfeccionar el control del ratón (puntería, clic/doble clic, arrastrar y soltar, desplazamiento por scroll, selección múltiple y trayectorias fluidas continuas), complementada con telemetría biomecánica en tiempo real, calibración adaptativa automática de dificultad y un tutor inteligente con soporte multi-proveedor (Nvidia NIM con Nemotron, Gemini y motor local fuera de línea).
+Transformación de la aplicación en una plataforma integral de destrezas digitales dividida en dos grandes módulos accesibles desde la barra superior: **Practicar Mouse** (con los 6 ejercicios actuales, práctica libre, récords y tutor IA) y **Practicar Teclado** (con el juego de ritmo en pista descendente tipo *Beatstar / Guitar Hero* con canciones libres y subida de archivos de audio, complementado con desafíos de mecanografía activa al estilo *Mario Teaches Typing*).
 
 ---
 
@@ -8,139 +8,134 @@ Plataforma web gamificada y accesible para aprender y perfeccionar el control de
 
 > [!IMPORTANT]
 > **Decisiones confirmadas por el usuario:**
-> - **Público y Estilo:** Universal y accesible para todas las edades, con diseño limpio, interactivo y ludificado (sin elementos infantiles condescendientes ni interfaces excesivamente técnicas).
-> - **Integración de IA:** Soporte principal para la API de Nvidia NIM (`https://integrate.api.nvidia.com/v1`) con modelos como `nvidia/nemotron-3.5-lightning-30b-a3b`, configuración por defecto de API key mediante backend seguro, más un selector interactivo donde el usuario puede ingresar su propia clave o alternar entre Nvidia NIM, Google Gemini y el motor heurístico local instantáneo.
-> - **Estructura de Progresión:** Misiones guiadas por niveles con estrellas (1 a 3 estrellas por precisión, velocidad y fluidez) más un Modo Práctica Libre con desafíos configurables y registro de marcas personales (Personal Best Scores).
+> - **Estructura de Menú Principal:** Separación limpia en la cabecera entre **"Practicar Mouse"** y **"Practicar Teclado"**, permitiendo alternar sin fricción entre el ecosistema actual del ratón y el nuevo ecosistema del teclado.
+> - **Prioridad de Implementación ("2 primero y luego 1"):**
+>   1. **Juego de Ritmo de Teclado (Rhythm Highway / Guitar Hero style):** Pista en perspectiva con notas descendentes alineadas en columnas rítmicas hacia la línea de impacto inferior (tal como en la imagen de referencia provista). El usuario presiona las teclas físicas exactas al compás de la música.
+>   2. **Desafíos Mecanográficos / Mario Teaches Typing:** Modo aventura complementario con entrenamiento guiado de filas de teclado (Home row `ASDF JKLÑ`, fila superior, fila inferior y símbolos), palabras en cascada y retroalimentación de WPM (palabras por minuto) y precisión.
+> - **Música y Audio:** 
+>   - **Biblioteca predeterminada:** Pistas integradas libres de derechos y sin copyright sintetizadas con Web Audio API de alta fidelidad y cadencias rítmicas (Chiptune Arcade, Synthwave 80s, Lofi Beat, EDM Rush).
+>   - **Subida de canciones:** Carga de archivos locales de audio (`.mp3`, `.wav`, `.ogg`) con decodificador Web Audio y analizador espectral de picos rítmicos para generar pistas de notas al vuelo.
+> - **Persistencia y Récords:** Integración directa con el sistema local y el botón "Restaurar Práctica" para limpiar o preservar récords de teclado junto con los de mouse.
 
 ---
 
 ## 1. Overview & Core Concept
 
-**MouseMaster** transforma el aprendizaje digital y la coordinación motriz fina en una experiencia gratificante y dinámica. La aplicación aborda los seis pilares fundamentales de la interacción con el ratón:
-1. **Movimiento General y Puntería (Target Clicking):** Coordinación ojo-mano, estimación de distancias y clics simples con objetivos estáticos y móviles.
-2. **Doble Clic y Clic Secuencial (Action Clicks):** Velocidad de cadencia entre clics y activación de menús contextuales contextualizados en el juego.
-3. **Arrastrar y Soltar (Drag & Drop):** Mantener el botón presionado mientras se desplaza el cursor a zonas de destino específicas (clasificación de elementos, encaje de piezas y rompecabezas).
-4. **Scroll y Rueda (Wheel Navigation):** Navegación controlada en ejes verticales y horizontales, control de zoom y parada precisa en puntos de interés.
-5. **Selección y Lazo (Box & Multi-Select):** Selección de áreas rectangulares (rubber-band selection), selección con tecla modificadora (Shift/Ctrl) y selección rápida de grupos.
-6. **Movimiento Fluido y Trazado (Fluid Path Tracking):** Navegación en curvas suaves sin salirse de márgenes estrechos, control de temblor (jitter) y velocidad constante.
+La plataforma evoluciona a **MasterSkills: Mouse & Keyboard**, unificando la motricidad fina del cursor con la agilidad y precisión dactiloscópica del teclado físico.
+
+1. **Selector de Modalidad Global:**
+   - **Practicar Mouse:** Mantiene intactos los 6 niveles didácticos (Puntería, Acción/Doble Clic, Arrastre, Scroll por rueda con clics de verificación, Selección de lazo, Trazado fluido), la Práctica Libre con desafíos y el Consejero IA.
+   - **Practicar Teclado:** Nueva suite completa de digitación dividida en:
+     - **Ritmo & Teclas (Rhythm Highway):** Pista visual 3D/slanted con 4 carriles (D, F, J, K o configurables) o carriles dinámicos, notas luminosas cayendo al ritmo, detección de tiempo (*PERFECT*, *GREAT*, *GOOD*, *MISS*), multiplicadores de combo y efectos de partículas.
+     - **Subida & Selección de Canciones:** Selector visual de pistas precargadas con preescucha, BPM y dificultad, más botón de carga de archivo de audio local con análisis de ritmo instantáneo.
+     - **Mecanografía Aventura (Mario Typing Style):** Desafíos de digitación continua por palabras y caracteres con avatar reactivo, velocidad WPM y prevención de errores visual en un teclado interactivo en pantalla.
+     - **Récords y Telemetría de Teclado:** Historial de mejores puntuaciones, precisión por tecla y análisis de debilidades de digitación con soporte para el tutor de IA (Nvidia Nemotron / Gemini).
 
 ---
 
 ## 2. User Experience & Visual Design
 
 ### Key User Flows
-1. **Página de Inicio / Hub de Entrenamiento:**
-   - Vista general del progreso del usuario: estrellas acumuladas, precisión global promedio y radar de competencias (Puntería, Velocidad, Arrastre, Scroll, Selección, Fluidez).
-   - Acceso inmediato a la "Ruta de Misiones" (niveles secuenciales) o al "Laboratorio Libre" (retos con récords personales).
-   - Barra superior limpia con selector de módulo, acceso a ajustes de IA y reinicio rápido.
-2. **Entorno de Ejercicio Interactivo:**
-   - **Canvas de interacción de gran escala (70% de pantalla):** Espacio activo con cursores visuales reactivos, dianas y guías de trayectoria.
-   - **HUD de Rendimiento en Tiempo Real (30% de pantalla):** Indicadores en vivo de precisión (%), tiempo de reacción (ms), temblor detectado (jitter score) y suavidad del trazo.
-   - **Sonido sutil y gratificante (Web Audio API):** Clics táctiles suaves, sonido de acierto progresivo y fanfarria breve al superar un nivel, con botón de silenciar siempre accesible.
-3. **Resumen de Misión y Calibración Adaptativa:**
-   - Evaluación de 1 a 3 estrellas basada en los umbrales de precisión y tiempo.
-   - **Ajuste automático de dificultad:** Si el usuario falla o muestra temblor repetido, el sistema amplía las áreas de impacto y reduce la velocidad; si domina el ejercicio, aumenta el desafío (menor tolerancia, objetivos más pequeños o dinámicos).
-   - **Consejero de IA (AI Coach):** Diagnóstico instantáneo con consejos ergonómicos de postura, sensibilidad del ratón (DPI) y técnica motriz recomendada, impulsado por Nvidia Nemotron, Gemini o el motor local.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        BARRA SUPERIOR GLOBAL                           │
+│  [Logo MasterSkills]   [🖱️ Practicar Mouse]   [⌨️ Practicar Teclado]   │
+│                        [Récords]  [Restaurar]  [Ajustes & IA]          │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+           ┌────────────────────────┴────────────────────────┐
+           ▼                                                 ▼
+┌──────────────────────┐                          ┌──────────────────────┐
+│   PRACTICAR MOUSE    │                          │  PRACTICAR TECLADO   │
+│  • Misiones (1-6)    │                          │  • Ritmo & Teclas    │
+│  • Práctica Libre    │                          │  • Subir Canción     │
+│  • Consejero IA      │                          │  • Mecanografía      │
+│  • HUD Telemetría    │                          │  • Teclado en vivo   │
+└──────────────────────┘                          └──────────────────────┘
+```
+
+1. **Flujo de Juego de Ritmo (Rhythm Highway):**
+   - **Pantalla de Selección de Canción:** Carátulas tipo arcade retro-moderno con información de artista, BPM, duración, nivel de dificultad (*Fácil 4 teclas*, *Medio ritmo rápido*, *Difícil polirritmia*) y botón para *Subir tu canción*.
+   - **Pista de Juego (In-Game Highway):** 
+     - Pista central con perspectiva y líneas de neón (cian, magenta, ámbar, esmeralda) simulando profundidad.
+     - Marcadores de impacto inferiores con anillos brillantes que reaccionan al presionar la tecla física con rebote visual instantáneo.
+     - Indicador flotante central de combo (`PERFECT! 12 COMBO`, `GREAT!`) y barra de vida/progreso de la canción.
+     - Teclado virtual opcional en la parte inferior para que principiantes vean qué dedo corresponde a cada tecla (índice, medio, anular).
+   - **Fin de Canción & Pantalla de Victoria:**
+     - Calificación de estrellas (1 a 3), porcentaje de notas perfectas, puntuación máxima, racha más larga y feedback del Consejero IA (ej. "Excelente tiempo de reacción en mano izquierda, menor precisión en tecla K").
+
+2. **Flujo de Subida de Canción Personalizada:**
+   - Arrastrar o seleccionar un archivo de audio (`.mp3`, `.wav`).
+   - El sistema analiza la forma de onda mediante `AudioContext.decodeAudioData` y un detector de transitorios/picos rítmicos (`OfflineAudioContext`).
+   - Genera automáticamente los tiempos de las notas sincronizadas con los golpes fuertes de la canción.
+   - Permite jugar inmediatamente con la música favorita del usuario sin enviar el archivo a ningún servidor (100% privado y seguro en el navegador).
+
+3. **Flujo de Mecanografía Aventura (Mario Teaches Typing Mode):**
+   - El usuario practica combinaciones de letras progresivas (fila guía, palabras completas, oraciones).
+   - Las palabras avanzan por la pantalla; cada pulsación correcta destruye un obstáculo o hace avanzar al personaje.
 
 ### Visual Identity & Theme
-- **Dirección Estética:** Moderno, accesible y pulcro. Evita la saturación artificial y las tarjetas genéricas; utiliza superficies suaves y tipografía de alta legibilidad inspirada en interfaces educativas escandinavas y de entrenamiento atlético.
-- **Paleta de Color (Regla 60-30-10):**
-  - **60% Fondo y Lienzo:** `#F8FAFC` (Slate 50 limpio en modo claro) / `#0F172A` (Slate 900 en modo oscuro).
-  - **30% Estructura y Paneles:** Superficies neutras `#FFFFFF` / `#1E293B`, bordes finos `#E2E8F0` / `#334155`.
-  - **10% Acentos Focales:**
-    - Primario (Acción y Éxito): Verde Esmeralda `#059669` (Acierto y avance seguro).
-    - Guías y Enfoque: Azul Índigo `#4F46E5` (Rutas de trazado y zonas de selección).
-    - Alertas de corrección: Ámbar cálido `#D97706` (Ajustes de dificultad y avisos pedagógicos).
-- **Tipografía:**
-  - Títulos y destacados: `Plus Jakarta Sans` (peso 600-700, balance tipográfico).
-  - Texto corporal: `Plus Jakarta Sans` (peso 400-500, espaciado cómodo).
-  - Métricas e índices numéricos: `tabular-nums` con monoespaciado para telemetría en tiempo real sin saltos visuales.
+- **Pista de Ritmo:** Inspirada en la interfaz provista (estilo *Beatstar / Guitar Hero*): fondo oscuro espacial `#0b0f19` con haces de luz de neón cian (`#06b6d4`), violeta eléctrico (`#8b5cf6`) y rosa neón (`#ec4899`).
+- **Feedback Háptico Visual:** Anillos de pulso expansivos en las teclas al acertar, sacudida sutil de pantalla en fallos y destellos de partículas sintetizados en canvas ligero.
+- **Tipografía:** Números de combo y puntuación en fuente monoespaciada `tabular-nums` de gran visibilidad para evitar saltos de pantalla.
 
 ---
 
 ## 3. Key Product Decisions & Trade-Offs
 
-- **Arquitectura de IA Híbrida (Nvidia NIM + Local Heuristic + Gemini):**
-  - *Enfoque:* Implementar un endpoint proxy en el backend de Node/Express (`/api/ai-feedback`) que interactúe de forma segura con `https://integrate.api.nvidia.com/v1/chat/completions` utilizando el modelo `nvidia/nemotron-3.5-lightning-30b-a3b` (y modelos alternativos de Nvidia). Si el usuario no tiene conexión o no suministra una clave, se activa automáticamente el *Motor Biomecánico Local* (cálculo de vectores de Fitts' Law, jerk/derivada tercera de posición y varianza de desplazamiento), garantizando que la app funcione al 100% en todo momento.
-  - *Seguridad:* Las claves no se exponen al cliente en el código; el usuario puede introducir su clave propia en la interfaz de Ajustes (guardada en su `localStorage` privado) o usar la clave inyectada por el servidor.
-- **Motor Adaptativo Dinámico (Dynamic Difficulty Adjustment - DDA):**
-  - Calcula un factor de dificultad $\lambda \in [0.5, 2.0]$. Tras cada serie de 3 intentos o final de nivel, el algoritmo de suavizado exponencial actualiza el radio de los blancos ($R = R_0 / \lambda$), la velocidad de movimiento ($V = V_0 \cdot \lambda$) y el margen de error de trazado.
-- **Persistencia Local y Récords Personales:**
-  - Guardado en `localStorage` del progreso por niveles, estrellas ganadas, mejores puntuaciones en práctica libre y preferencias de IA. Sin dependencias externas pesadas para arranque inmediato.
+### A. Motor de Audio y Detección de Ritmo
+- **Decisión:** Implementar un sintetizador de música procedural de alta calidad con Web Audio API para las canciones predeterminadas, junto con un analizador de envolvente espectral en cliente para las canciones subidas por el usuario.
+- **Razón:** Cero problemas de copyright, tiempos de carga instantáneos (0 KB de descargas externas), latencia de audio inferior a 10 ms y compatibilidad total sin requerir almacenamiento en la nube ni servicios de terceros.
+
+### B. Distribución de Teclas y Ergonomía
+- **Decisión:** Configuración estándar en fila base (`D`, `F`, `J`, `K` o `A`, `S`, `K`, `L`) con posibilidad de modo adaptativo (2 teclas para niños/principiantes, 4 teclas para intermedios, y modo teclado completo `A-Z` para práctica de mecanografía).
+- **Razón:** Cumple el principio de ergonomía universal y permite que usuarios de cualquier edad o destreza jueguen cómodamente con ambas manos.
+
+### C. Coexistencia con el Módulo de Mouse
+- **Decisión:** Barra de navegación superior con conmutador prominente de pestaña principal: `[🖱️ Practicar Mouse]` y `[⌨️ Practicar Teclado]`.
+- **Razón:** Mantiene el 100% de la funcionalidad actual del mouse sin sobrecargar la pantalla, organizando la aplicación como una suite de habilidades digitales de nivel profesional.
 
 ---
 
-## 4. Technical Architecture & Data Strategy
-
-### System Architecture Diagram
+## 4. Technical Architecture & Component Hierarchy
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                              CLIENT (Browser)                          │
-│                                                                        │
-│  ┌───────────────────────┐  ┌───────────────────────────────────────┐  │
-│  │   Navigation / HUD    │  │       Exercise Canvas Engine          │  │
-│  │  - Level & Stars Bar  │  │  - Target Clicker (Precision)         │  │
-│  │  - Metric Telemetry   │  │  - Action Clicker (Double/Right Click)│  │
-│  │  - Personal Best High │  │  - Drag & Drop Sorting Arena          │  │
-│  │  - AI Settings Modal  │  │  - Wheel & Infinite Scroll Chamber    │  │
-│  └───────────┬───────────┘  │  - Marquee / Lasso Selection Grid     │  │
-│              │              │  - Fluid Trajectory Path Follower     │  │
-│              │              └───────────────────┬───────────────────┘  │
-│              ▼                                  ▼                      │
-│  ┌──────────────────────────────────────────────────────────────────┐  │
-│  │             Telemetry & Motion Analytics Engine                  │  │
-│  │   - Real-time Cursor Coordinates, Velocity (px/ms), Jitter Vector│  │
-│  │   - Overshoot Detection, Dwell Time, Fitts' Law Index            │  │
-│  │   - Dynamic Difficulty Calibrator (DDA)                          │  │
-│  └──────────────────────────────────┬───────────────────────────────┘  │
-│                                     │                                  │
-│                 ┌───────────────────┴───────────────────┐              │
-│                 ▼                                       ▼              │
-│     ┌───────────────────────┐               ┌───────────────────────┐  │
-│     │ Local Rule Evaluator  │               │ Backend Proxy Service │  │
-│     │ (Zero-latency offline)│               │   /api/ai-feedback    │  │
-│     └───────────────────────┘               └───────────┬───────────┘  │
-└─────────────────────────────────────────────────────────┼──────────────┘
-                                                          ▼
-                                  ┌───────────────────────────────────┐
-                                  │      Nvidia NIM API / Gemini      │
-                                  │   https://integrate.api.nvidia.com│
-                                  │  nemotron-3.5-lightning-30b-a3b   │
-                                  └───────────────────────────────────┘
+src/
+├── components/
+│   ├── Header.tsx                   # Selector global: 'mouse' | 'keyboard'
+│   │
+│   ├── keyboard/
+│   │   ├── KeyboardHub.tsx          # Vista principal de teclado: selector de canciones y modos
+│   │   ├── RhythmHighwayGame.tsx    # Pista de ritmo interactiva (Falling Notes Engine)
+│   │   ├── SongSelectorModal.tsx    # Selector de canciones (Preset + Carga de MP3/WAV)
+│   │   ├── TypingAdventureGame.tsx  # Modo aventura de mecanografía (estilo Mario Typing)
+│   │   ├── VirtualKeyboardGuide.tsx # Guía visual de dedos y teclas presionadas
+│   │   └── KeyboardScoreModal.tsx   # Resumen de partida, combo, estrellas y consejo IA
+│   │
+│   └── exercises/                   # Ejercicios de mouse existentes (intactos)
+│
+└── utils/
+    ├── rhythmEngine.ts              # Generador de notas, sincronización de BPM y detección de picos
+    ├── audioAnalyzer.ts             # Decodificador de MP3/WAV local a eventos rítmicos
+    ├── keyboardTracker.ts           # Telemetría de pulsaciones, precisión, WPM y errores frecuentes
+    └── sound.ts                     # Efectos de sonido y sintetizador de canciones libres
 ```
 
-### Exercise Modules Specification
-1. **Módulo 1: Puntería y Movimiento (Target Range):**
-   - Blancos concéntricos que aparecen en posiciones aleatorias.
-   - Puntuación basada en distancia al centro del blanco y tiempo de llegada.
-2. **Módulo 2: Clic Doble y Clic Secuencial (Action Arena):**
-   - Objetos que requieren doble clic rápido (conmutación de carpetas/cajas sorpresa) y clic derecho (menú contextual para realizar una acción específica).
-3. **Módulo 3: Arrastrar y Soltar (Drop Zone & Puzzle):**
-   - Clasificación de elementos geométricos o de reciclaje en contenedores específicos.
-   - Detección precisa de eventos `pointerdown`, `pointermove`, `pointerup` para soporte impecable y feedback de imantación.
-4. **Módulo 4: Rueda y Scroll (Precision Scroll Vault):**
-   - Túnel de navegación con checkpoints verticales y horizontales donde el usuario debe alinear marcadores exactos con la rueda del ratón.
-5. **Módulo 5: Selección de Objetos y Lazo (Box & Multi-Select):**
-   - Caja de selección arrastrable (rubber-band) para atrapar solo los elementos válidos (ej. capturar todas las gemas azules evitando los obstáculos).
-6. **Módulo 6: Trazo Fluido Continuo (Smooth River & Maze):**
-   - Laberintos y curvas Bezier con paredes estrechas donde el cursor no debe tocar los bordes, midiendo la velocidad constante y la ausencia de saltos bruscos.
-
-### State & Storage Structure
-- `currentModule`: Módulo activo ('targets' | 'actions' | 'drag' | 'scroll' | 'select' | 'fluid')
-- `mode`: 'campaign' (misiones 1 a 6 con estrellas) | 'free_practice' (retos infinitos con récord de score)
-- `difficulty`: Factor numérico (1.0 default) que escala parámetros físicos de los ejercicios
-- `telemetry`: Registro de los últimos 100 movimientos (coordenadas, tiempos, clics fallidos, desvíos)
-- `aiProvider`: 'nvidia' | 'gemini' | 'local'
-- `nvidiaModel`: 'nvidia/nemotron-3.5-lightning-30b-a3b' | 'meta/llama-3.3-70b-instruct' | 'nvidia/llama-3.1-nemotron-70b-instruct'
-- `highScores`: Registro de puntuaciones máximas por ejercicio guardado en `localStorage`
-- `audioEnabled`: Booleano para efectos sonoros sintetizados
+### State Mapping & Interactive Handlers
+- `mainAppMode`: `'mouse' | 'keyboard'`.
+- `keyboardSubMode`: `'rhythm' | 'typing_adventure' | 'records'`.
+- `currentSong`: Objeto con `title`, `artist`, `bpm`, `difficulty`, `audioBuffer` o `synthPattern`, y `noteEvents`.
+- `rhythmState`: `score`, `combo`, `maxCombo`, `hits: { perfect, great, good, miss }`, `streakMultiplier`.
+- `keydown` Listener: Intercepta teclas en tiempo real (`e.code` / `e.key`), compara con la ventana de tiempo de la nota activa (±45ms = Perfect, ±90ms = Great, ±150ms = Good, >150ms = Miss), reproduce el golpe sonoro y actualiza el combo.
 
 ---
 
-## Plan de Verificación y Compilación
+## 5. Verification & Testing Plan
 
-1. **Servidor y Proxy de API:** Configurar servidor Express seguro en `server.ts` con proxy a Nvidia NIM (`https://integrate.api.nvidia.com/v1`) y Gemini, protegiendo las credenciales y gestionando CORS adecuadamente.
-2. **Componentes y Motor Interactivo:** Construir la suite completa de 6 ejercicios interactivos con Web Audio API y telemetría de movimiento.
-3. **Calibración y DDA:** Probar el ajuste dinámico de dificultad frente a fallos y aciertos consecutivos.
-4. **Validación de Compilación:** Ejecutar `compile_applet` para garantizar cero errores de TypeScript y empaquetado impecable con Vite.
+1. **Verificación de Navegación:** Comprobar que alternar entre "Practicar Mouse" y "Practicar Teclado" conserve el estado y los récords de ambos entornos.
+2. **Prueba de Pista de Ritmo:** Ejecutar una pista predeterminada, verificar caída suave a 60 FPS, respuesta instantánea de las teclas `D`, `F`, `J`, `K`, acumulación de combos y sonidos de impacto.
+3. **Prueba de Carga de Canción:** Probar subir un archivo `.mp3`/`.wav`, verificar que se decodifique correctamente y genere notas sincronizadas con el compás.
+4. **Prueba de Modo Mecanografía:** Validar digitación continua de letras y oraciones, cálculo de WPM y registro de teclas problemáticas.
+5. **Prueba de Limpieza (Restaurar Práctica):** Confirmar que el botón de restaurar práctica reinicie adecuadamente tanto los récords de mouse como los de teclado.
+6. **Compilación y Build:** Ejecutar `compile_applet` para garantizar cero errores de TypeScript y empaquetado para Vercel.
