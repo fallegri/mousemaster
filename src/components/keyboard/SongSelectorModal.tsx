@@ -220,32 +220,46 @@ export const SongSelectorModal: React.FC<Props> = ({
                         <Music className="w-5 h-5 opacity-80" />
                       </div>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {song.levelNumber && (
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-indigo-600 text-white uppercase tracking-wider">
+                              Nivel {song.levelNumber}
+                            </span>
+                          )}
                           <h4 className="text-sm font-bold text-white truncate">{song.title}</h4>
                           {song.genre === 'custom' && (
                             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                               Tu Archivo
                             </span>
                           )}
+                          {song.laneKeys.length === 8 ? (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                              8 Teclas (Bimanual)
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-slate-700/60 text-slate-300 border border-slate-600/50">
+                              4 Teclas
+                            </span>
+                          )}
                         </div>
-                        <p className="text-xs text-slate-400 truncate">{song.artist}</p>
-                        <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400">
+                        <p className="text-xs text-slate-400 truncate mt-0.5">
+                          {song.categoryLabel || song.artist}
+                        </p>
+                        <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400 flex-wrap">
                           <span className="tabular-nums font-mono">{song.bpm} BPM</span>
                           <span>•</span>
-                          <span className="tabular-nums font-mono">{song.duration}s</span>
+                          <span className="tabular-nums font-mono text-amber-400 font-semibold">2:00 max</span>
                           <span>•</span>
-                          <span
-                            className={`font-semibold capitalize ${
-                              song.difficulty === 'hard'
-                                ? 'text-rose-400'
-                                : song.difficulty === 'normal'
-                                ? 'text-amber-400'
-                                : 'text-emerald-400'
-                            }`}
-                          >
-                            {song.difficulty === 'easy' ? 'Fácil' : song.difficulty === 'normal' ? 'Normal' : 'Desafío'}
-                          </span>
+                          <div className="flex items-center gap-1 font-mono font-bold text-[10px]">
+                            <span className="text-cyan-400 bg-cyan-950/50 px-1 rounded border border-cyan-500/30">
+                              {song.laneKeys.slice(0, song.laneKeys.length === 8 ? 4 : 2).join(' ')}
+                            </span>
+                            <span className="text-slate-500">+</span>
+                            <span className="text-fuchsia-400 bg-purple-950/50 px-1 rounded border border-purple-500/30">
+                              {song.laneKeys.slice(song.laneKeys.length === 8 ? 4 : 2).join(' ')}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -309,32 +323,88 @@ export const SongSelectorModal: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Lane Keys Configuration Indicator */}
-              <div className="flex flex-col gap-2 mb-4 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Teclas asignadas para la pista
-                </span>
-                <div className="grid grid-cols-4 gap-2">
-                  {activeSong.laneKeys.map((key, i) => {
-                    const colors = [
-                      'border-cyan-500/40 text-cyan-400 bg-cyan-950/30',
-                      'border-blue-500/40 text-blue-400 bg-blue-950/30',
-                      'border-purple-500/40 text-purple-400 bg-purple-950/30',
-                      'border-pink-500/40 text-pink-400 bg-pink-950/30',
-                    ];
-                    return (
-                      <div
-                        key={i}
-                        className={`flex flex-col items-center justify-center p-2 rounded-xl border font-bold font-mono text-sm ${colors[i % 4]}`}
-                      >
-                        <span className="text-base">{key}</span>
-                        <span className="text-[9px] font-normal opacity-70">
-                          {i === 0 ? 'Med. Izq' : i === 1 ? 'Índ. Izq' : i === 2 ? 'Índ. Der' : 'Med. Der'}
-                        </span>
-                      </div>
-                    );
-                  })}
+              {/* Lane Keys Configuration Indicator (4 or 8 Keys grouped by Hand) */}
+              <div className="flex flex-col gap-2.5 mb-4 p-3.5 rounded-xl bg-slate-900 border border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                    Teclas de la pista ({activeSong.laneKeys.length} Teclas)
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold font-mono">
+                    Límite: 2 Minutos
+                  </span>
                 </div>
+
+                {activeSong.laneKeys.length === 8 ? (
+                  <div className="space-y-2">
+                    {/* Mano Izquierda */}
+                    <div>
+                      <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider block mb-1">
+                        Mano Izquierda (Meñique, Anular, Medio, Índice)
+                      </span>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {activeSong.laneKeys.slice(0, 4).map((key, i) => (
+                          <div
+                            key={i}
+                            className="flex flex-col items-center justify-center py-1.5 rounded-lg border border-cyan-500/40 text-cyan-300 bg-cyan-950/30 font-bold font-mono text-sm"
+                          >
+                            <span className="text-base">{key}</span>
+                            <span className="text-[8px] font-normal opacity-70">
+                              {i === 0 ? 'Meñ.' : i === 1 ? 'Anu.' : i === 2 ? 'Med.' : 'Índ.'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Mano Derecha */}
+                    <div>
+                      <span className="text-[10px] text-fuchsia-400 font-bold uppercase tracking-wider block mb-1">
+                        Mano Derecha (Índice, Medio, Anular, Meñique)
+                      </span>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {activeSong.laneKeys.slice(4, 8).map((key, i) => (
+                          <div
+                            key={i}
+                            className="flex flex-col items-center justify-center py-1.5 rounded-lg border border-purple-500/40 text-purple-300 bg-purple-950/30 font-bold font-mono text-sm"
+                          >
+                            <span className="text-base">{key}</span>
+                            <span className="text-[8px] font-normal opacity-70">
+                              {i === 0 ? 'Índ.' : i === 1 ? 'Med.' : i === 2 ? 'Anu.' : 'Meñ.'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {activeSong.laneKeys.map((key, i) => {
+                      const colors = [
+                        'border-cyan-500/40 text-cyan-400 bg-cyan-950/30',
+                        'border-blue-500/40 text-blue-400 bg-blue-950/30',
+                        'border-purple-500/40 text-purple-400 bg-purple-950/30',
+                        'border-pink-500/40 text-pink-400 bg-pink-950/30',
+                      ];
+                      return (
+                        <div
+                          key={i}
+                          className={`flex flex-col items-center justify-center p-2 rounded-xl border font-bold font-mono text-sm ${colors[i % 4]}`}
+                        >
+                          <span className="text-base">{key}</span>
+                          <span className="text-[9px] font-normal opacity-70">
+                            {i === 0 ? 'Med. Izq' : i === 1 ? 'Índ. Izq' : i === 2 ? 'Índ. Der' : 'Med. Der'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {activeSong.descriptionTip && (
+                  <p className="text-[11px] text-indigo-300/80 leading-relaxed pt-1 border-t border-slate-800">
+                    💡 {activeSong.descriptionTip}
+                  </p>
+                )}
               </div>
 
               {/* Challenge Tips */}

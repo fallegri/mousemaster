@@ -10,9 +10,7 @@ import {
   VolumeX,
   Pause,
   Play,
-  RotateCcw,
   ArrowLeft,
-  Trophy,
   Keyboard as KeyboardIcon,
 } from 'lucide-react';
 
@@ -37,46 +35,116 @@ interface ParticleEffect {
   color: string;
 }
 
-const LANE_CONFIGS = [
+interface LaneConfig {
+  lane: number;
+  color: string;
+  borderColor: string;
+  lightBeam: string;
+  fingerLabel: string;
+  hand: 'left' | 'right';
+}
+
+const LANE_CONFIGS_4: LaneConfig[] = [
   {
     lane: 0,
     color: '#06b6d4', // Cyan
-    bgGradient: 'from-cyan-500/20 to-transparent',
     borderColor: 'border-cyan-400',
-    ringColor: 'ring-cyan-400',
-    glowColor: 'shadow-cyan-400/50',
-    lightBeam: 'bg-cyan-500/15',
-    fingerLabel: 'Dedo Medio Izq',
+    lightBeam: 'bg-cyan-500/20',
+    fingerLabel: 'Medio Izq',
+    hand: 'left',
   },
   {
     lane: 1,
     color: '#3b82f6', // Blue
-    bgGradient: 'from-blue-500/20 to-transparent',
     borderColor: 'border-blue-400',
-    ringColor: 'ring-blue-400',
-    glowColor: 'shadow-blue-400/50',
-    lightBeam: 'bg-blue-500/15',
+    lightBeam: 'bg-blue-500/20',
     fingerLabel: 'Índice Izq',
+    hand: 'left',
   },
   {
     lane: 2,
     color: '#a855f7', // Purple
-    bgGradient: 'from-purple-500/20 to-transparent',
     borderColor: 'border-purple-400',
-    ringColor: 'ring-purple-400',
-    glowColor: 'shadow-purple-400/50',
-    lightBeam: 'bg-purple-500/15',
+    lightBeam: 'bg-purple-500/20',
     fingerLabel: 'Índice Der',
+    hand: 'right',
   },
   {
     lane: 3,
     color: '#ec4899', // Pink
-    bgGradient: 'from-pink-500/20 to-transparent',
     borderColor: 'border-pink-400',
-    ringColor: 'ring-pink-400',
-    glowColor: 'shadow-pink-400/50',
-    lightBeam: 'bg-pink-500/15',
-    fingerLabel: 'Dedo Medio Der',
+    lightBeam: 'bg-pink-500/20',
+    fingerLabel: 'Medio Der',
+    hand: 'right',
+  },
+];
+
+const LANE_CONFIGS_8: LaneConfig[] = [
+  // Bloque Mano Izquierda (4 Dedos: Meñique, Anular, Medio, Índice)
+  {
+    lane: 0,
+    color: '#06b6d4', // Cyan
+    borderColor: 'border-cyan-400',
+    lightBeam: 'bg-cyan-500/20',
+    fingerLabel: 'Meñique Izq',
+    hand: 'left',
+  },
+  {
+    lane: 1,
+    color: '#0ea5e9', // Sky
+    borderColor: 'border-sky-400',
+    lightBeam: 'bg-sky-500/20',
+    fingerLabel: 'Anular Izq',
+    hand: 'left',
+  },
+  {
+    lane: 2,
+    color: '#3b82f6', // Blue
+    borderColor: 'border-blue-400',
+    lightBeam: 'bg-blue-500/20',
+    fingerLabel: 'Medio Izq',
+    hand: 'left',
+  },
+  {
+    lane: 3,
+    color: '#6366f1', // Indigo
+    borderColor: 'border-indigo-400',
+    lightBeam: 'bg-indigo-500/20',
+    fingerLabel: 'Índice Izq',
+    hand: 'left',
+  },
+  // Bloque Mano Derecha (4 Dedos: Índice, Medio, Anular, Meñique)
+  {
+    lane: 4,
+    color: '#a855f7', // Purple
+    borderColor: 'border-purple-400',
+    lightBeam: 'bg-purple-500/20',
+    fingerLabel: 'Índice Der',
+    hand: 'right',
+  },
+  {
+    lane: 5,
+    color: '#d946ef', // Fuchsia
+    borderColor: 'border-fuchsia-400',
+    lightBeam: 'bg-fuchsia-500/20',
+    fingerLabel: 'Medio Der',
+    hand: 'right',
+  },
+  {
+    lane: 6,
+    color: '#ec4899', // Pink
+    borderColor: 'border-pink-400',
+    lightBeam: 'bg-pink-500/20',
+    fingerLabel: 'Anular Der',
+    hand: 'right',
+  },
+  {
+    lane: 7,
+    color: '#f59e0b', // Amber
+    borderColor: 'border-amber-400',
+    lightBeam: 'bg-amber-500/20',
+    fingerLabel: 'Meñique Der',
+    hand: 'right',
   },
 ];
 
@@ -87,6 +155,10 @@ export const RhythmHighwayGame: React.FC<Props> = ({
   soundEnabled,
   onToggleSound,
 }) => {
+  const is8Keys = song.laneKeys.length === 8;
+  const laneConfigs = is8Keys ? LANE_CONFIGS_8 : LANE_CONFIGS_4;
+  const totalLanes = song.laneKeys.length;
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(3);
@@ -105,10 +177,15 @@ export const RhythmHighwayGame: React.FC<Props> = ({
   // Active judgements & feedback
   const [activeJudgement, setActiveJudgement] = useState<ActiveJudgement | null>(null);
   const [particles, setParticles] = useState<ParticleEffect[]>([]);
-  const [activeLanePresses, setActiveLanePresses] = useState<boolean[]>([false, false, false, false]);
+  const [activeLanePresses, setActiveLanePresses] = useState<boolean[]>(() =>
+    new Array(totalLanes).fill(false)
+  );
   const [lastPressedKey, setLastPressedKey] = useState<string | null>(null);
 
-  // Timing & notes state
+  // Timing & notes state: Max 120 seconds (2 minutes)
+  const MAX_ROUND_DURATION = 120;
+  const roundDuration = Math.min(song.duration || 120, MAX_ROUND_DURATION);
+
   const notesRef = useRef<RhythmNote[]>(JSON.parse(JSON.stringify(song.notes)));
   const animFrameRef = useRef<number | null>(null);
   const currentTimeRef = useRef<number>(0);
@@ -152,6 +229,7 @@ export const RhythmHighwayGame: React.FC<Props> = ({
 
   const handleSongEnd = () => {
     setIsPlaying(false);
+    rhythmAudio.stop();
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
 
     // Calculate final results
@@ -213,7 +291,7 @@ export const RhythmHighwayGame: React.FC<Props> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isPlaying, isPaused, combo, score, multiplier]);
+  }, [isPlaying, isPaused, combo, score, multiplier, song.laneKeys]);
 
   // Main hit evaluation logic
   const triggerHit = (lane: number, keyName: string) => {
@@ -248,59 +326,65 @@ export const RhythmHighwayGame: React.FC<Props> = ({
       closestNote.hit = true;
 
       let judgement: 'PERFECT' | 'GREAT' | 'GOOD' = 'GOOD';
-      let points = 100;
+      let basePoints = 150;
 
       if (minDelta <= HIT_WINDOW_PERFECT) {
         judgement = 'PERFECT';
-        points = 300;
-        setPerfectCount((c) => c + 1);
+        basePoints = 400;
+        setPerfectCount((p) => p + 1);
       } else if (minDelta <= HIT_WINDOW_GREAT) {
         judgement = 'GREAT';
-        points = 200;
-        setGreatCount((c) => c + 1);
+        basePoints = 250;
+        setGreatCount((g) => g + 1);
       } else {
-        setGoodCount((c) => c + 1);
+        judgement = 'GOOD';
+        basePoints = 150;
+        setGoodCount((g) => g + 1);
       }
 
       closestNote.judgement = judgement;
+
+      // Update Combo & Multiplier
+      const nextCombo = combo + 1;
+      setCombo(nextCombo);
+      if (nextCombo > maxCombo) setMaxCombo(nextCombo);
+
+      const nextMult = nextCombo >= 30 ? 4 : nextCombo >= 18 ? 3 : nextCombo >= 8 ? 2 : 1;
+      setMultiplier(nextMult);
+
+      const addedScore = basePoints * nextMult;
+      setScore((s) => s + addedScore);
+
+      // Audio feedback & judgement pop
       rhythmAudio.playHitSound(judgement);
-
-      // Score & combo
-      const newCombo = combo + 1;
-      const newMultiplier = newCombo >= 50 ? 4 : newCombo >= 25 ? 3 : newCombo >= 10 ? 2 : 1;
-
-      setCombo(newCombo);
-      setMaxCombo((prev) => Math.max(prev, newCombo));
-      setMultiplier(newMultiplier);
-      setScore((s) => s + points * newMultiplier);
-
-      // Visual flash
       setActiveJudgement({ id: Date.now(), type: judgement, lane });
-
-      // Spawn celebratory particles
-      spawnParticles(lane);
+      spawnParticles(lane, judgement);
     } else {
-      // Pressed with no note nearby or mistimed
-      rhythmAudio.playHitSound('MISS');
-      setActiveJudgement({ id: Date.now(), type: 'MISS', lane });
-      setCombo(0);
-      setMultiplier(1);
-      setMissCount((m) => m + 1);
+      // Premature press without note nearby: slight touch sound
+      sound.playClick(320);
     }
   };
 
-  const spawnParticles = (lane: number) => {
-    const color = LANE_CONFIGS[lane].color;
-    const newBatch = Array.from({ length: 6 }).map((_, i) => ({
-      id: Date.now() + i,
-      x: (Math.random() - 0.5) * 60,
-      y: (Math.random() - 0.5) * 40,
-      color,
-    }));
+  const spawnParticles = (lane: number, judgement: string) => {
+    const laneWidth = 100 / totalLanes;
+    const x = lane * laneWidth + laneWidth / 2;
+    const y = 88; // Target line percent
+    const color = laneConfigs[lane]?.color || '#a855f7';
+
+    const count = judgement === 'PERFECT' ? 8 : 4;
+    const newBatch: ParticleEffect[] = [];
+    for (let i = 0; i < count; i++) {
+      newBatch.push({
+        id: Math.random(),
+        x: x + (Math.random() - 0.5) * 8,
+        y: y + (Math.random() - 0.5) * 6,
+        color,
+      });
+    }
     setParticles((prev) => [...prev.slice(-18), ...newBatch]);
   };
 
-  // Main 60 FPS animation loop for falling notes and miss detection
+  // Main 60 FPS animation loop for falling notes, miss detection, and 2-min limit
   useEffect(() => {
     if (!isPlaying || isPaused) return;
 
@@ -308,6 +392,12 @@ export const RhythmHighwayGame: React.FC<Props> = ({
       const now = rhythmAudio.getCurrentTime();
       currentTimeRef.current = now;
       setElapsedTime(now);
+
+      // Enforce strict 2-minute round limit (or song duration if smaller)
+      if (now >= roundDuration) {
+        handleSongEnd();
+        return;
+      }
 
       // Check for missed notes that passed beyond the hit zone (more than 1.15s past hit line)
       const notes = notesRef.current;
@@ -330,7 +420,7 @@ export const RhythmHighwayGame: React.FC<Props> = ({
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
-  }, [isPlaying, isPaused]);
+  }, [isPlaying, isPaused, roundDuration]);
 
   // Clean judgements and particles over time
   useEffect(() => {
@@ -350,8 +440,8 @@ export const RhythmHighwayGame: React.FC<Props> = ({
     }
   };
 
-  const remainingSeconds = Math.max(0, Math.ceil(song.duration - elapsedTime));
-  const progressPercent = Math.min(100, (elapsedTime / song.duration) * 100);
+  const remainingSeconds = Math.max(0, Math.ceil(roundDuration - elapsedTime));
+  const progressPercent = Math.min(100, (elapsedTime / roundDuration) * 100);
 
   return (
     <div className="relative w-full h-[calc(100vh-64px)] max-h-[920px] bg-slate-950 flex flex-col items-center justify-between overflow-hidden select-none text-white font-sans">
@@ -359,45 +449,57 @@ export const RhythmHighwayGame: React.FC<Props> = ({
       <div className="absolute inset-0 bg-radial from-indigo-950/40 via-slate-950 to-slate-950 pointer-events-none" />
 
       {/* Top HUD Bar */}
-      <div className="relative z-20 w-full max-w-4xl px-6 py-3 flex items-center justify-between gap-4 border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md">
+      <div className="relative z-20 w-full max-w-5xl px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3 border-b border-slate-800/80 bg-slate-950/70 backdrop-blur-md">
         {/* Left: Song info & Back */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
           <button
             onClick={() => {
               rhythmAudio.stop();
               onExit();
             }}
-            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Volver al menú de canciones"
+            className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+            title="Volver a la selección de niveles"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <span>{song.title}</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
+          <div className="min-w-0">
+            <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-1.5 flex-wrap">
+              {song.levelNumber && (
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-600 text-white font-black uppercase tracking-wider">
+                  NIVEL {song.levelNumber}
+                </span>
+              )}
+              <span className="truncate">{song.title}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
                 {song.bpm} BPM
               </span>
-              <span className="hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
-                Ventana ±1s Flexible
+              <span className="hidden md:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-semibold">
+                {is8Keys ? '8 Teclas Bimanual' : '4 Teclas Focales'}
+              </span>
+              <span className="hidden lg:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                ±1s Tolerancia
               </span>
             </h3>
-            <p className="text-[11px] text-slate-400">{song.artist}</p>
+            <p className="text-[11px] text-slate-400 truncate">
+              {song.categoryLabel || song.artist}
+            </p>
           </div>
         </div>
 
         {/* Center: Live Score & Multiplier */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
           <div className="text-center">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Puntos</span>
-            <span className="text-2xl font-black tabular-nums tracking-tight font-mono text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]">
+            <span className="text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+              Puntos
+            </span>
+            <span className="text-xl sm:text-2xl font-black tabular-nums tracking-tight font-mono text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.3)]">
               {score.toLocaleString()}
             </span>
           </div>
 
           {/* Multiplier Badge */}
           <div
-            className={`px-3 py-1 rounded-xl border flex items-center gap-1.5 transition-all ${
+            className={`px-2.5 py-1 rounded-xl border flex items-center gap-1.5 transition-all ${
               multiplier >= 4
                 ? 'bg-rose-500/20 border-rose-400 text-rose-300 animate-pulse'
                 : multiplier >= 3
@@ -407,17 +509,19 @@ export const RhythmHighwayGame: React.FC<Props> = ({
                 : 'bg-slate-800/80 border-slate-700 text-slate-400'
             }`}
           >
-            <Flame className="w-4 h-4" />
-            <span className="font-extrabold text-sm tabular-nums">x{multiplier}</span>
+            <Flame className="w-3.5 h-3.5" />
+            <span className="font-extrabold text-xs sm:text-sm tabular-nums">x{multiplier}</span>
           </div>
         </div>
 
-        {/* Right: Controls & Time Remaining */}
-        <div className="flex items-center gap-3">
+        {/* Right: Controls & Time Remaining (2 min limit) */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="text-right">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Tiempo</span>
-            <span className="text-sm font-mono font-bold text-slate-200 tabular-nums">
-              -{Math.floor(remainingSeconds / 60)}:{String(remainingSeconds % 60).padStart(2, '0')}
+            <span className="text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+              Límite 2:00
+            </span>
+            <span className="text-xs sm:text-sm font-mono font-bold text-amber-400 tabular-nums">
+              {Math.floor(remainingSeconds / 60)}:{String(remainingSeconds % 60).padStart(2, '0')}
             </span>
           </div>
 
@@ -438,7 +542,7 @@ export const RhythmHighwayGame: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Song Progress Track Line */}
+      {/* Song Progress Track Line (up to 2 minutes max) */}
       <div className="w-full h-1 bg-slate-900 relative">
         <div
           className="h-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 transition-all duration-100 shadow-[0_0_8px_rgba(168,85,247,0.6)]"
@@ -448,31 +552,56 @@ export const RhythmHighwayGame: React.FC<Props> = ({
 
       {/* Main Rhythm Highway Canvas / 3D Track */}
       <div className="relative flex-1 w-full flex items-center justify-center overflow-hidden">
-        {/* 3D Perspective Container */}
+        {/* 3D Perspective Container: Adaptable for 4 or 8 Lanes */}
         <div
-          className="relative w-[340px] sm:w-[420px] md:w-[480px] h-full flex flex-col justify-between"
+          className={`relative h-full flex flex-col justify-between ${
+            is8Keys
+              ? 'w-[96%] max-w-[780px]'
+              : 'w-[340px] sm:w-[420px] md:w-[480px]'
+          }`}
           style={{
-            perspective: '700px',
-            perspectiveOrigin: '50% 15%',
+            perspective: '720px',
+            perspectiveOrigin: '50% 12%',
           }}
         >
+          {/* Header Bimanual Division Indicators for 8 Keys */}
+          {is8Keys && (
+            <div className="absolute top-1 left-0 right-0 z-30 flex items-center justify-between px-3 pointer-events-none">
+              <div className="flex-1 text-center py-1 bg-cyan-950/40 rounded-lg border border-cyan-500/20 backdrop-blur-xs mr-2">
+                <span className="text-[10px] uppercase font-bold text-cyan-300 tracking-wider">
+                  Mano Izquierda (4 Dedos)
+                </span>
+              </div>
+              <div className="w-4 text-center text-indigo-400 font-bold opacity-60">|</div>
+              <div className="flex-1 text-center py-1 bg-purple-950/40 rounded-lg border border-purple-500/20 backdrop-blur-xs ml-2">
+                <span className="text-[10px] uppercase font-bold text-fuchsia-300 tracking-wider">
+                  Mano Derecha (4 Dedos)
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Slanted Highway Surface */}
           <div
-            className="relative w-full h-full flex border-x-2 border-indigo-500/40 bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 shadow-[0_0_50px_rgba(79,70,229,0.2)]"
+            className="relative w-full h-full flex border-x-2 border-indigo-500/40 bg-gradient-to-b from-slate-950 via-slate-900/90 to-slate-950 shadow-[0_0_50px_rgba(79,70,229,0.25)]"
             style={{
-              transform: 'rotateX(30deg)',
+              transform: 'rotateX(28deg)',
               transformOrigin: '50% 100%',
             }}
           >
-            {/* 4 Vertical Highway Lanes */}
-            {LANE_CONFIGS.map((cfg, index) => {
+            {/* Vertical Highway Lanes */}
+            {laneConfigs.map((cfg, index) => {
               const isPressed = activeLanePresses[index];
+              const isMiddleDivider = is8Keys && index === 3;
+
               return (
                 <div
                   key={cfg.lane}
-                  className={`relative flex-1 h-full border-r border-slate-800/80 flex flex-col justify-end items-center transition-colors duration-75 ${
-                    isPressed ? cfg.lightBeam : ''
-                  }`}
+                  className={`relative flex-1 h-full border-r flex flex-col justify-end items-center transition-colors duration-75 ${
+                    isMiddleDivider
+                      ? 'border-r-2 border-indigo-400/80 shadow-[0_0_12px_rgba(99,102,241,0.6)]'
+                      : 'border-slate-800/80'
+                  } ${isPressed ? cfg.lightBeam : ''}`}
                 >
                   {/* Subtle lane ambient glow line */}
                   <div
@@ -503,7 +632,8 @@ export const RhythmHighwayGame: React.FC<Props> = ({
                 // Progress: 0 at top horizon, 1 at hit line (88%)
                 const progress = 1 - timeUntilHit / NOTE_FALL_DURATION;
                 const topPercent = Math.min(96, progress * 88);
-                const laneCfg = LANE_CONFIGS[note.lane];
+                const laneCfg = laneConfigs[note.lane] || laneConfigs[0];
+                const laneWidthPercent = 100 / totalLanes;
 
                 // Scale notes as they get closer (3D depth feeling)
                 const scale = 0.65 + Math.min(1.05, progress) * 0.45;
@@ -515,16 +645,20 @@ export const RhythmHighwayGame: React.FC<Props> = ({
                     key={note.id}
                     className="absolute transition-transform duration-16 flex items-center justify-center"
                     style={{
-                      left: `${note.lane * 25}%`,
-                      width: '25%',
+                      left: `${note.lane * laneWidthPercent}%`,
+                      width: `${laneWidthPercent}%`,
                       top: `${topPercent}%`,
                       transform: `translateY(-50%) scale(${scale})`,
                       opacity,
                     }}
                   >
-                    {/* Glowing Circular Note Bar (like reference image) */}
+                    {/* Glowing Circular Note Bar */}
                     <div
-                      className={`w-14 sm:w-16 h-7 sm:h-8 rounded-full border-2 flex items-center justify-center font-extrabold text-xs shadow-lg transition-transform ${
+                      className={`${
+                        is8Keys
+                          ? 'w-10 sm:w-12 h-6 sm:h-7 text-[10px] sm:text-xs'
+                          : 'w-14 sm:w-16 h-7 sm:h-8 text-xs sm:text-sm'
+                      } rounded-full border-2 flex items-center justify-center font-black shadow-lg transition-transform ${
                         isLate ? 'ring-2 ring-emerald-400/50' : ''
                       }`}
                       style={{
@@ -545,20 +679,27 @@ export const RhythmHighwayGame: React.FC<Props> = ({
 
             {/* Hit Target Line & Receptor Rings at Bottom (88%) */}
             <div className="absolute bottom-[10%] left-0 right-0 h-16 flex items-center justify-between border-t border-b border-indigo-400/40 bg-slate-900/60 backdrop-blur-xs">
-              {LANE_CONFIGS.map((cfg, index) => {
+              {laneConfigs.map((cfg, index) => {
                 const isPressed = activeLanePresses[index];
                 const key = song.laneKeys[index];
+                const isMiddleDivider = is8Keys && index === 3;
 
                 return (
                   <button
                     key={cfg.lane}
                     type="button"
                     onClick={() => triggerHit(index, key)}
-                    className="relative flex-1 h-full flex flex-col items-center justify-center cursor-pointer group focus:outline-none"
+                    className={`relative flex-1 h-full flex flex-col items-center justify-center cursor-pointer group focus:outline-none ${
+                      isMiddleDivider ? 'border-r-2 border-indigo-400/70' : ''
+                    }`}
                   >
                     {/* Glowing Hit Target Disc */}
                     <div
-                      className={`relative w-14 sm:w-16 h-12 sm:h-14 rounded-full border-2 flex items-center justify-center font-black transition-all duration-75 ${
+                      className={`relative ${
+                        is8Keys
+                          ? 'w-10 sm:w-12 h-10 sm:h-12'
+                          : 'w-14 sm:w-16 h-12 sm:h-14'
+                      } rounded-full border-2 flex items-center justify-center font-black transition-all duration-75 ${
                         isPressed
                           ? 'scale-90 bg-white text-slate-950 ring-4'
                           : 'bg-slate-900/90 text-white'
@@ -568,7 +709,9 @@ export const RhythmHighwayGame: React.FC<Props> = ({
                         boxShadow: isPressed ? `0 0 30px ${cfg.color}` : `0 0 10px ${cfg.color}33`,
                       }}
                     >
-                      <span className="text-base sm:text-lg font-mono drop-shadow">{key}</span>
+                      <span className={`${is8Keys ? 'text-xs sm:text-sm' : 'text-base sm:text-lg'} font-mono drop-shadow`}>
+                        {key}
+                      </span>
 
                       {/* Ripple Ring on press */}
                       {isPressed && (
@@ -578,6 +721,11 @@ export const RhythmHighwayGame: React.FC<Props> = ({
                         />
                       )}
                     </div>
+
+                    {/* Small Finger Label below receptor */}
+                    <span className="text-[9px] font-medium text-slate-400 mt-1 hidden sm:block truncate max-w-[55px]">
+                      {cfg.fingerLabel}
+                    </span>
                   </button>
                 );
               })}
@@ -613,25 +761,58 @@ export const RhythmHighwayGame: React.FC<Props> = ({
 
         {/* Start Countdown Overlay */}
         {countdown !== null && (
-          <div className="absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center gap-4">
+          <div className="absolute inset-0 z-40 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center gap-4">
             <span className="text-xs uppercase font-extrabold tracking-widest text-indigo-400">
-              Prepárate para pulsar las teclas
+              {song.levelNumber ? `Nivel ${song.levelNumber}: ${song.title}` : song.title}
             </span>
             <span className="text-7xl font-black text-white animate-bounce font-mono drop-shadow-[0_0_30px_rgba(99,102,241,0.8)]">
               {countdown}
             </span>
-            <div className="flex items-center gap-4 text-sm font-semibold text-slate-300 mt-2">
-              <span>Coloca tus dedos en:</span>
-              <div className="flex items-center gap-2">
-                {song.laneKeys.map((k) => (
-                  <span
-                    key={k}
-                    className="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-400 text-indigo-300 flex items-center justify-center font-mono font-bold"
-                  >
-                    {k}
-                  </span>
-                ))}
+            <div className="flex flex-col items-center gap-2 text-sm font-semibold text-slate-300 mt-2">
+              <div className="text-xs text-slate-400">
+                {is8Keys
+                  ? 'Coloca tus 8 dedos en el teclado (4 mano izq. / 4 mano der.):'
+                  : 'Coloca tus dedos en:'}
               </div>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                {is8Keys ? (
+                  <>
+                    <div className="flex items-center gap-1 p-1 bg-cyan-950/40 rounded-xl border border-cyan-500/30">
+                      {song.laneKeys.slice(0, 4).map((k) => (
+                        <span
+                          key={k}
+                          className="w-8 h-8 rounded-lg bg-cyan-600/30 border border-cyan-400 text-cyan-300 flex items-center justify-center font-mono font-bold"
+                        >
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-slate-500 font-bold px-1">+</span>
+                    <div className="flex items-center gap-1 p-1 bg-purple-950/40 rounded-xl border border-purple-500/30">
+                      {song.laneKeys.slice(4, 8).map((k) => (
+                        <span
+                          key={k}
+                          className="w-8 h-8 rounded-lg bg-fuchsia-600/30 border border-fuchsia-400 text-fuchsia-300 flex items-center justify-center font-mono font-bold"
+                        >
+                          {k}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  song.laneKeys.map((k) => (
+                    <span
+                      key={k}
+                      className="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-400 text-indigo-300 flex items-center justify-center font-mono font-bold"
+                    >
+                      {k}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+            <div className="text-[11px] text-amber-400/80 font-mono">
+              Duración máxima de ronda: 2 Minutos (120s)
             </div>
           </div>
         )}

@@ -102,10 +102,16 @@ export interface KeyboardSong {
   difficulty: 'easy' | 'normal' | 'hard';
   genre: string;
   coverGradient: string;
-  laneKeys: string[]; // default ['D', 'F', 'J', 'K']
+  laneKeys: string[]; // default 4 keys or 8 keys bimanual
   audioSynthType: 'synthwave' | 'chiptune' | 'lofi' | 'techno' | 'custom';
   customAudioUrl?: string;
   notes: RhythmNote[];
+  levelNumber?: number;
+  categoryLabel?: string;
+  handLayout?: '4-keys' | '8-keys-bimanual';
+  leftHandKeys?: string[];
+  rightHandKeys?: string[];
+  descriptionTip?: string;
 }
 
 export interface KeyboardScoreSummary {

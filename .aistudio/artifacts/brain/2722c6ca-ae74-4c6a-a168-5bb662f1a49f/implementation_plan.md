@@ -1,141 +1,111 @@
-# Plan de Implementación: Módulo de Aprendizaje de Teclado y Ritmo (TypeMaster + MouseMaster)
+# Plan de Implementación Revisado: Niveles Bimanuales de 4 y 8 Teclas & Límite de 2 Minutos
 
-Transformación de la aplicación en una plataforma integral de destrezas digitales dividida en dos grandes módulos accesibles desde la barra superior: **Practicar Mouse** (con los 6 ejercicios actuales, práctica libre, récords y tutor IA) y **Practicar Teclado** (con el juego de ritmo en pista descendente tipo *Beatstar / Guitar Hero* con canciones libres y subida de archivos de audio, complementado con desafíos de mecanografía activa al estilo *Mario Teaches Typing*).
-
----
-
-## User Review & Critical Decisions
-
-> [!IMPORTANT]
-> **Decisiones confirmadas por el usuario:**
-> - **Estructura de Menú Principal:** Separación limpia en la cabecera entre **"Practicar Mouse"** y **"Practicar Teclado"**, permitiendo alternar sin fricción entre el ecosistema actual del ratón y el nuevo ecosistema del teclado.
-> - **Prioridad de Implementación ("2 primero y luego 1"):**
->   1. **Juego de Ritmo de Teclado (Rhythm Highway / Guitar Hero style):** Pista en perspectiva con notas descendentes alineadas en columnas rítmicas hacia la línea de impacto inferior (tal como en la imagen de referencia provista). El usuario presiona las teclas físicas exactas al compás de la música.
->   2. **Desafíos Mecanográficos / Mario Teaches Typing:** Modo aventura complementario con entrenamiento guiado de filas de teclado (Home row `ASDF JKLÑ`, fila superior, fila inferior y símbolos), palabras en cascada y retroalimentación de WPM (palabras por minuto) y precisión.
-> - **Música y Audio:** 
->   - **Biblioteca predeterminada:** Pistas integradas libres de derechos y sin copyright sintetizadas con Web Audio API de alta fidelidad y cadencias rítmicas (Chiptune Arcade, Synthwave 80s, Lofi Beat, EDM Rush).
->   - **Subida de canciones:** Carga de archivos locales de audio (`.mp3`, `.wav`, `.ogg`) con decodificador Web Audio y analizador espectral de picos rítmicos para generar pistas de notas al vuelo.
-> - **Persistencia y Récords:** Integración directa con el sistema local y el botón "Restaurar Práctica" para limpiar o preservar récords de teclado junto con los de mouse.
+## 1. Visión General
+Evolucionar el juego de ritmo hacia una experiencia mecanográfica inmersiva:
+1. **Niveles Iniciales (4 Teclas):** Entrenamiento focalizado de dedos clave (2 en cada mano).
+2. **Niveles Avanzados (8 Teclas Bimanuales):** 4 teclas en la mano izquierda y 4 en la mano derecha, recreando la posición completa de mecanografía y el flujo natural de escribir palabras.
+3. **Autopista Adaptativa de 8 Columnas:** Renderizado dividido en bloque izquierdo (Mano Izquierda) y bloque derecho (Mano Derecha) con canal central neón y colores ergonómicos para cada mano.
+4. **Límite Estricto de 2 Minutos (120 s):** La ronda concluye a los 120 segundos (o antes si la canción dura menos), aplicable tanto a canciones integradas como a archivos MP3/WAV subidos.
 
 ---
 
-## 1. Overview & Core Concept
+## 2. Estructura de Progresión de Niveles (8 Niveles)
 
-La plataforma evoluciona a **MasterSkills: Mouse & Keyboard**, unificando la motricidad fina del cursor con la agilidad y precisión dactiloscópica del teclado físico.
+### Fase 1: Fundamentos Táctiles (4 Teclas Focales - 2 por mano)
+* **Nivel 1: Fila Guía Inicial (Índices y Medios)**
+  * **Tema:** *Lofi Digital Chill* (85 BPM)
+  * **Teclas:** `['D', 'F', 'J', 'K']` (Mano Izq: D, F | Mano Der: J, K)
+  * **Objetivo:** Sentir los relieves guía de F y J con ritmo relajado.
+* **Nivel 2: Fila Guía Extrema (Meñiques y Anulares)**
+  * **Tema:** *Groove Home Row* (102 BPM)
+  * **Teclas:** `['A', 'S', 'L', 'Ñ']` (Mano Izq: A, S | Mano Der: L, Ñ)
+  * **Objetivo:** Fortalecer los dedos exteriores menos usados.
+* **Nivel 3: Fila Superior Interior (Extensión Natural)**
+  * **Tema:** *Neon Highway 1984* (118 BPM)
+  * **Teclas:** `['E', 'R', 'U', 'I']` (Mano Izq: E, R | Mano Der: U, I)
+  * **Objetivo:** Subir desde la fila guía manteniendo la orientación táctil.
+* **Nivel 4: Fila Inferior Interior (Flexión Táctil)**
+  * **Tema:** *Pixel Quest 8-Bit* (128 BPM)
+  * **Teclas:** `['C', 'V', 'M', 'N']` (Mano Izq: C, V | Mano Der: M, N)
+  * **Objetivo:** Descender a la fila inferior con los dedos índices y medios.
 
-1. **Selector de Modalidad Global:**
-   - **Practicar Mouse:** Mantiene intactos los 6 niveles didácticos (Puntería, Acción/Doble Clic, Arrastre, Scroll por rueda con clics de verificación, Selección de lazo, Trazado fluido), la Práctica Libre con desafíos y el Consejero IA.
-   - **Practicar Teclado:** Nueva suite completa de digitación dividida en:
-     - **Ritmo & Teclas (Rhythm Highway):** Pista visual 3D/slanted con 4 carriles (D, F, J, K o configurables) o carriles dinámicos, notas luminosas cayendo al ritmo, detección de tiempo (*PERFECT*, *GREAT*, *GOOD*, *MISS*), multiplicadores de combo y efectos de partículas.
-     - **Subida & Selección de Canciones:** Selector visual de pistas precargadas con preescucha, BPM y dificultad, más botón de carga de archivo de audio local con análisis de ritmo instantáneo.
-     - **Mecanografía Aventura (Mario Typing Style):** Desafíos de digitación continua por palabras y caracteres con avatar reactivo, velocidad WPM y prevención de errores visual en un teclado interactivo en pantalla.
-     - **Récords y Telemetría de Teclado:** Historial de mejores puntuaciones, precisión por tecla y análisis de debilidades de digitación con soporte para el tutor de IA (Nvidia Nemotron / Gemini).
-
----
-
-## 2. User Experience & Visual Design
-
-### Key User Flows
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                        BARRA SUPERIOR GLOBAL                           │
-│  [Logo MasterSkills]   [🖱️ Practicar Mouse]   [⌨️ Practicar Teclado]   │
-│                        [Récords]  [Restaurar]  [Ajustes & IA]          │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-           ┌────────────────────────┴────────────────────────┐
-           ▼                                                 ▼
-┌──────────────────────┐                          ┌──────────────────────┐
-│   PRACTICAR MOUSE    │                          │  PRACTICAR TECLADO   │
-│  • Misiones (1-6)    │                          │  • Ritmo & Teclas    │
-│  • Práctica Libre    │                          │  • Subir Canción     │
-│  • Consejero IA      │                          │  • Mecanografía      │
-│  • HUD Telemetría    │                          │  • Teclado en vivo   │
-└──────────────────────┘                          └──────────────────────┘
-```
-
-1. **Flujo de Juego de Ritmo (Rhythm Highway):**
-   - **Pantalla de Selección de Canción:** Carátulas tipo arcade retro-moderno con información de artista, BPM, duración, nivel de dificultad (*Fácil 4 teclas*, *Medio ritmo rápido*, *Difícil polirritmia*) y botón para *Subir tu canción*.
-   - **Pista de Juego (In-Game Highway):** 
-     - Pista central con perspectiva y líneas de neón (cian, magenta, ámbar, esmeralda) simulando profundidad.
-     - Marcadores de impacto inferiores con anillos brillantes que reaccionan al presionar la tecla física con rebote visual instantáneo.
-     - Indicador flotante central de combo (`PERFECT! 12 COMBO`, `GREAT!`) y barra de vida/progreso de la canción.
-     - Teclado virtual opcional en la parte inferior para que principiantes vean qué dedo corresponde a cada tecla (índice, medio, anular).
-   - **Fin de Canción & Pantalla de Victoria:**
-     - Calificación de estrellas (1 a 3), porcentaje de notas perfectas, puntuación máxima, racha más larga y feedback del Consejero IA (ej. "Excelente tiempo de reacción en mano izquierda, menor precisión en tecla K").
-
-2. **Flujo de Subida de Canción Personalizada:**
-   - Arrastrar o seleccionar un archivo de audio (`.mp3`, `.wav`).
-   - El sistema analiza la forma de onda mediante `AudioContext.decodeAudioData` y un detector de transitorios/picos rítmicos (`OfflineAudioContext`).
-   - Genera automáticamente los tiempos de las notas sincronizadas con los golpes fuertes de la canción.
-   - Permite jugar inmediatamente con la música favorita del usuario sin enviar el archivo a ningún servidor (100% privado y seguro en el navegador).
-
-3. **Flujo de Mecanografía Aventura (Mario Teaches Typing Mode):**
-   - El usuario practica combinaciones de letras progresivas (fila guía, palabras completas, oraciones).
-   - Las palabras avanzan por la pantalla; cada pulsación correcta destruye un obstáculo o hace avanzar al personaje.
-
-### Visual Identity & Theme
-- **Pista de Ritmo:** Inspirada en la interfaz provista (estilo *Beatstar / Guitar Hero*): fondo oscuro espacial `#0b0f19` con haces de luz de neón cian (`#06b6d4`), violeta eléctrico (`#8b5cf6`) y rosa neón (`#ec4899`).
-- **Feedback Háptico Visual:** Anillos de pulso expansivos en las teclas al acertar, sacudida sutil de pantalla en fallos y destellos de partículas sintetizados en canvas ligero.
-- **Tipografía:** Números de combo y puntuación en fuente monoespaciada `tabular-nums` de gran visibilidad para evitar saltos de pantalla.
+### Fase 2: Maestría Bimanual (8 Teclas - 4 Mano Izquierda + 4 Mano Derecha)
+* **Nivel 5: Fila Guía Completa Bimanual (Home Row 8K)**
+  * **Tema:** *Cyber Pulse 8K* (120 BPM)
+  * **Teclas:** `['A', 'S', 'D', 'F', 'J', 'K', 'L', 'Ñ']`
+  * **Mano Izquierda (4):** `A` (meñique), `S` (anular), `D` (medio), `F` (índice)
+  * **Mano Derecha (4):** `J` (índice), `K` (medio), `L` (anular), `Ñ` (meñique)
+  * **Dinámica:** Caída alternada y combinada simulando tipeo fluido bimanual.
+* **Nivel 6: Fila Superior Completa Bimanual (QWERTY 8K)**
+  * **Tema:** *Skyline Synthetics* (132 BPM)
+  * **Teclas:** `['Q', 'W', 'E', 'R', 'U', 'I', 'O', 'P']`
+  * **Mano Izquierda (4):** `Q`, `W`, `E`, `R`
+  * **Mano Derecha (4):** `U`, `I`, `O`, `P`
+  * **Dinámica:** Extensión coordinada completa de todos los dedos.
+* **Nivel 7: Fluidez Natural Bimanual (Palabras y Filas Combinadas)**
+  * **Tema:** *Velocity Rush 145* (145 BPM)
+  * **Teclas:** `['A', 'W', 'E', 'F', 'J', 'I', 'O', 'Ñ']`
+  * **Mano Izquierda (4):** `A`, `W`, `E`, `F`
+  * **Mano Derecha (4):** `J`, `I`, `O`, `Ñ`
+  * **Dinámica:** Patrones que forman raíces frecuentes de palabras del español/inglés ("we", "on", "ai", "safe", "fiel").
+* **Nivel 8: Desafío Master Bimanual (3 Filas Integradas)**
+  * **Tema:** *Hyper Cosmic Drill* (155 BPM)
+  * **Teclas:** `['Z', 'X', 'D', 'F', 'J', 'K', 'M', 'P']`
+  * **Mano Izquierda (4):** `Z`, `X`, `D`, `F`
+  * **Mano Derecha (4):** `J`, `K`, `M`, `P`
+  * **Dinámica:** Máxima independencia motriz y reflejos coordinados.
 
 ---
 
-## 3. Key Product Decisions & Trade-Offs
+## 3. Arquitectura Visual de la Autopista (4 vs 8 Pistas)
 
-### A. Motor de Audio y Detección de Ritmo
-- **Decisión:** Implementar un sintetizador de música procedural de alta calidad con Web Audio API para las canciones predeterminadas, junto con un analizador de envolvente espectral en cliente para las canciones subidas por el usuario.
-- **Razón:** Cero problemas de copyright, tiempos de carga instantáneos (0 KB de descargas externas), latencia de audio inferior a 10 ms y compatibilidad total sin requerir almacenamiento en la nube ni servicios de terceros.
-
-### B. Distribución de Teclas y Ergonomía
-- **Decisión:** Configuración estándar en fila base (`D`, `F`, `J`, `K` o `A`, `S`, `K`, `L`) con posibilidad de modo adaptativo (2 teclas para niños/principiantes, 4 teclas para intermedios, y modo teclado completo `A-Z` para práctica de mecanografía).
-- **Razón:** Cumple el principio de ergonomía universal y permite que usuarios de cualquier edad o destreza jueguen cómodamente con ambas manos.
-
-### C. Coexistencia con el Módulo de Mouse
-- **Decisión:** Barra de navegación superior con conmutador prominente de pestaña principal: `[🖱️ Practicar Mouse]` y `[⌨️ Practicar Teclado]`.
-- **Razón:** Mantiene el 100% de la funcionalidad actual del mouse sin sobrecargar la pantalla, organizando la aplicación como una suite de habilidades digitales de nivel profesional.
-
----
-
-## 4. Technical Architecture & Component Hierarchy
-
-```
-src/
-├── components/
-│   ├── Header.tsx                   # Selector global: 'mouse' | 'keyboard'
-│   │
-│   ├── keyboard/
-│   │   ├── KeyboardHub.tsx          # Vista principal de teclado: selector de canciones y modos
-│   │   ├── RhythmHighwayGame.tsx    # Pista de ritmo interactiva (Falling Notes Engine)
-│   │   ├── SongSelectorModal.tsx    # Selector de canciones (Preset + Carga de MP3/WAV)
-│   │   ├── TypingAdventureGame.tsx  # Modo aventura de mecanografía (estilo Mario Typing)
-│   │   ├── VirtualKeyboardGuide.tsx # Guía visual de dedos y teclas presionadas
-│   │   └── KeyboardScoreModal.tsx   # Resumen de partida, combo, estrellas y consejo IA
-│   │
-│   └── exercises/                   # Ejercicios de mouse existentes (intactos)
-│
-└── utils/
-    ├── rhythmEngine.ts              # Generador de notas, sincronización de BPM y detección de picos
-    ├── audioAnalyzer.ts             # Decodificador de MP3/WAV local a eventos rítmicos
-    ├── keyboardTracker.ts           # Telemetría de pulsaciones, precisión, WPM y errores frecuentes
-    └── sound.ts                     # Efectos de sonido y sintetizador de canciones libres
-```
-
-### State Mapping & Interactive Handlers
-- `mainAppMode`: `'mouse' | 'keyboard'`.
-- `keyboardSubMode`: `'rhythm' | 'typing_adventure' | 'records'`.
-- `currentSong`: Objeto con `title`, `artist`, `bpm`, `difficulty`, `audioBuffer` o `synthPattern`, y `noteEvents`.
-- `rhythmState`: `score`, `combo`, `maxCombo`, `hits: { perfect, great, good, miss }`, `streakMultiplier`.
-- `keydown` Listener: Intercepta teclas en tiempo real (`e.code` / `e.key`), compara con la ventana de tiempo de la nota activa (±45ms = Perfect, ±90ms = Great, ±150ms = Good, >150ms = Miss), reproduce el golpe sonoro y actualiza el combo.
+1. **Soporte Dinámico de Carriles:**
+   - Si `laneKeys.length === 4`: Autopista estándar espaciosa de 4 columnas.
+   - Si `laneKeys.length === 8`: Autopista bimanual con dos bloques de 4 columnas:
+     * **Bloque Izquierdo (Mano Izquierda):** Color azul/cyan/índigo con indicador superior *"Mano Izquierda"*.
+     * **Separador Central Neón:** Línea divisoria luminosa vertical que ayuda al cerebro a separar el control de cada hemisferio/mano.
+     * **Bloque Derecho (Mano Derecha):** Color magenta/fucsia/ámbar con indicador superior *"Mano Derecha"*.
+2. **Dianas de Impacto y Feedback:**
+   - Letra visible en tamaño grande y nítido en cada diana de impacto (`[A] [S] [D] [F] | [J] [K] [L] [Ñ]`).
+   - Efecto visual de pulsación (iluminación del carril completo) cuando el usuario pulsa la tecla correspondiente.
+   - Soporte para teclados en español (incluyendo `Ñ` y teclas estándar sin conflictos).
 
 ---
 
-## 5. Verification & Testing Plan
+## 4. Regla de Tiempo: Límite Exacto de 2 Minutos (120 s)
 
-1. **Verificación de Navegación:** Comprobar que alternar entre "Practicar Mouse" y "Practicar Teclado" conserve el estado y los récords de ambos entornos.
-2. **Prueba de Pista de Ritmo:** Ejecutar una pista predeterminada, verificar caída suave a 60 FPS, respuesta instantánea de las teclas `D`, `F`, `J`, `K`, acumulación de combos y sonidos de impacto.
-3. **Prueba de Carga de Canción:** Probar subir un archivo `.mp3`/`.wav`, verificar que se decodifique correctamente y genere notas sincronizadas con el compás.
-4. **Prueba de Modo Mecanografía:** Validar digitación continua de letras y oraciones, cálculo de WPM y registro de teclas problemáticas.
-5. **Prueba de Limpieza (Restaurar Práctica):** Confirmar que el botón de restaurar práctica reinicie adecuadamente tanto los récords de mouse como los de teclado.
-6. **Compilación y Build:** Ejecutar `compile_applet` para garantizar cero errores de TypeScript y empaquetado para Vercel.
+1. **Duración de la Ronda:**
+   - La duración activa se calcula como `Math.min(song.duration, 120)`.
+   - Si el audio o sintetizador tiene mayor duración, la partida concluye con un fundido suave al llegar a los 120.0 segundos.
+   - Para canciones MP3/WAV subidas por el usuario, el temporizador corta automáticamente a los 2 minutos (120 segundos).
+2. **Generador de Notas Continuas:**
+   - El generador algorítmico distribuirá notas hasta el segundo 118, asegurando que haya música y notas fluidas durante los 2 minutos completos sin lapsos vacíos.
+3. **HUD y Cronómetro:**
+   - Visualizador de tiempo restante en formato `MM:SS` (ej. `01:58 / 02:00`).
+   - Barra de progreso que se llena progresivamente hasta el 100% al completar los 2 minutos.
+4. **Pantalla de Resumen Final:**
+   - Conteo de notas (Perfect, Great, Good, Miss), combo máximo y porcentaje de precisión.
+   - Botón directo para "Siguiente Nivel" que avanza automáticamente al siguiente desafío desbloqueado.
+
+---
+
+## 5. Mantenimiento de la Tolerancia Flexible (±1.05s)
+* Se mantendrá la amplia ventana de acierto de ±1.05s ya implementada, permitiendo que tanto en 4 como en 8 teclas el usuario se concentre en aprender la posición correcta de los dedos sin estrés de micro-milisegundos.
+
+---
+
+## 6. Pasos de Implementación y Verificación
+
+1. **Actualizar `src/types/index.ts`:**
+   - Añadir metadatos de nivel en `KeyboardSong` (`levelNumber`, `handLayout: '4-keys' | '8-keys-bimanual'`, `categoryLabel`).
+2. **Actualizar `src/data/keyboardSongs.ts`:**
+   - Implementar la lista de 8 niveles con la progresión de 4 y 8 teclas descrita.
+   - Ajustar el generador de notas rítmicas para distribuir notas fluidamente a lo largo de los 120 segundos de duración.
+3. **Actualizar `src/components/keyboard/RhythmHighwayGame.tsx`:**
+   - Adaptar el renderizador de la autopista para admitir 4 u 8 carriles con división estética en dos bloques para la mano izquierda y derecha.
+   - Integrar el temporizador de 120 segundos máximos con corte automático y fundido de audio.
+   - Añadir soporte dinámico para todas las teclas asignadas en `keydown`.
+4. **Actualizar `src/components/keyboard/SongSelectorModal.tsx`:**
+   - Mostrar insignias de nivel (`Nivel 1` a `Nivel 8`), etiquetas de categoría (`Fila Guía`, `Fila Superior`, `Bimanual 8K`), y badges visuales para cada una de las teclas del nivel separadas por mano.
+5. **Compilación y Pruebas:**
+   - Ejecutar `compile_applet` y `npm run build` para garantizar cero errores de sintaxis y empaquetado.

@@ -88,14 +88,24 @@ export const VirtualKeyboardGuide: React.FC<Props> = ({
   return (
     <div className={`w-full max-w-2xl mx-auto rounded-2xl bg-slate-900/90 border border-slate-800 p-3 shadow-xl backdrop-blur-md select-none ${compact ? 'text-xs' : 'text-sm'}`}>
       {/* Legend of Fingers */}
-      <div className="flex items-center justify-between gap-2 px-2 pb-2 mb-2 border-b border-slate-800 text-[11px] text-slate-400">
+      <div className="flex items-center justify-between gap-2 px-2 pb-2 mb-2 border-b border-slate-800 text-[11px] text-slate-400 flex-wrap">
         <div className="flex items-center gap-1.5 font-medium">
           <span className="w-2 h-2 rounded-full bg-cyan-400" />
-          <span>Mano Izquierda: Dedo Medio (D), Índice (F)</span>
+          <span>
+            Mano Izquierda:{' '}
+            <strong className="text-cyan-300">
+              {normActive.length >= 4 ? normActive.slice(0, normActive.length === 8 ? 4 : 2).join(', ') : 'D, F'}
+            </strong>
+          </span>
         </div>
         <div className="flex items-center gap-1.5 font-medium">
-          <span className="w-2 h-2 rounded-full bg-blue-400" />
-          <span>Mano Derecha: Índice (J), Medio (K)</span>
+          <span className="w-2 h-2 rounded-full bg-fuchsia-400" />
+          <span>
+            Mano Derecha:{' '}
+            <strong className="text-fuchsia-300">
+              {normActive.length >= 4 ? normActive.slice(normActive.length === 8 ? 4 : 2).join(', ') : 'J, K'}
+            </strong>
+          </span>
         </div>
       </div>
 

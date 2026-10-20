@@ -1,6 +1,6 @@
 {
-  "summary":  "Plan de implementación para la expansión de MouseMaster: incorporación de menú principal modular (Practicar Mouse / Practicar Teclado), juego de ritmo tipo Beatstar/Guitar Hero con notas descendentes sincronizadas con música libre de derechos y opción de subir canciones, seguido del modo de mecanografía interactiva estilo Mario Teaches Typing.",
-  "updatedAt":  "2026-10-20T17:54:46.631394361Z",
+  "summary":  "Plan revisado para incorporar niveles iniciales de 4 teclas y niveles avanzados de 8 teclas bimanuales (4 mano izquierda y 4 mano derecha), autopista dividida en bloque izquierdo y derecho, simulación de patrones de escritura de palabras y límite de tiempo exacto de 2 minutos (120 segundos).",
+  "updatedAt":  "2026-10-20T19:18:10.654080680Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

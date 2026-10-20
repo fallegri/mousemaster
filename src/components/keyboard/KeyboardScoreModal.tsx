@@ -19,6 +19,8 @@ interface Props {
   onClose: () => void;
   onPlayAgain: () => void;
   onChangeTrack: () => void;
+  onNextLevel?: () => void;
+  nextLevelTitle?: string;
   userSettings: UserSettings;
 }
 
@@ -28,6 +30,8 @@ export const KeyboardScoreModal: React.FC<Props> = ({
   onClose,
   onPlayAgain,
   onChangeTrack,
+  onNextLevel,
+  nextLevelTitle,
   userSettings,
 }) => {
   const [starsRevealed, setStarsRevealed] = useState(0);
@@ -182,28 +186,43 @@ export const KeyboardScoreModal: React.FC<Props> = ({
         </div>
 
         {/* Modal Buttons */}
-        <div className="w-full flex flex-col sm:flex-row items-center gap-3">
-          <button
-            onClick={() => {
-              sound.playClick();
-              onPlayAgain();
-            }}
-            className="w-full sm:flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer transition-all"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Repetir Pista</span>
-          </button>
+        <div className="w-full flex flex-col gap-2.5">
+          {onNextLevel && (
+            <button
+              onClick={() => {
+                sound.playClick();
+                onNextLevel();
+              }}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-500 text-white font-extrabold text-xs tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 cursor-pointer transition-all"
+            >
+              <span>SIGUIENTE NIVEL {nextLevelTitle ? `(${nextLevelTitle})` : ''}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              sound.playClick();
-              onChangeTrack();
-            }}
-            className="w-full sm:flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all"
-          >
-            <Music className="w-4 h-4" />
-            <span>Cambiar Canción</span>
-          </button>
+          <div className="w-full flex flex-col sm:flex-row items-center gap-2.5">
+            <button
+              onClick={() => {
+                sound.playClick();
+                onPlayAgain();
+              }}
+              className="w-full sm:flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 cursor-pointer transition-all"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Repetir Pista</span>
+            </button>
+
+            <button
+              onClick={() => {
+                sound.playClick();
+                onChangeTrack();
+              }}
+              className="w-full sm:flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs border border-slate-700 flex items-center justify-center gap-2 cursor-pointer transition-all"
+            >
+              <Music className="w-4 h-4" />
+              <span>Elegir Nivel / Canción</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -35,10 +35,17 @@ export const KeyboardHub: React.FC<Props> = ({
   onSaveRecord,
 }) => {
   const [subMode, setSubMode] = useState<'hub' | 'playing_rhythm' | 'playing_typing'>('hub');
-  const [selectedSong, setSelectedSong] = useState<KeyboardSong>(PRESET_SONGS[1]); // Neon Highway default
+  const [selectedSong, setSelectedSong] = useState<KeyboardSong>(PRESET_SONGS[0]); // Level 1 default
   const [isSongSelectorOpen, setIsSongSelectorOpen] = useState(false);
   const [activeSummary, setActiveSummary] = useState<KeyboardScoreSummary | null>(null);
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
+
+  // Calculate next song in the preset progression
+  const currentSongIndex = PRESET_SONGS.findIndex((s) => s.id === selectedSong.id);
+  const nextSong =
+    currentSongIndex !== -1 && currentSongIndex < PRESET_SONGS.length - 1
+      ? PRESET_SONGS[currentSongIndex + 1]
+      : null;
 
   const handleFinishGame = (summary: KeyboardScoreSummary) => {
     setActiveSummary(summary);
@@ -69,6 +76,17 @@ export const KeyboardHub: React.FC<Props> = ({
             setSubMode('hub');
             setTimeout(() => setSubMode('playing_rhythm'), 50);
           }}
+          onNextLevel={
+            nextSong
+              ? () => {
+                  setSelectedSong(nextSong);
+                  setIsScoreModalOpen(false);
+                  setSubMode('hub');
+                  setTimeout(() => setSubMode('playing_rhythm'), 50);
+                }
+              : undefined
+          }
+          nextLevelTitle={nextSong ? `Nivel ${nextSong.levelNumber}: ${nextSong.title}` : undefined}
           onChangeTrack={() => {
             setIsScoreModalOpen(false);
             setSubMode('hub');
@@ -161,12 +179,19 @@ export const KeyboardHub: React.FC<Props> = ({
             sound.playClick();
             setIsSongSelectorOpen(true);
           }}
-          className={`relative w-full md:w-80 aspect-16/11 rounded-2xl bg-gradient-to-br ${selectedSong.coverGradient} p-5 flex flex-col justify-between border border-white/20 shadow-2xl cursor-pointer hover:scale-102 transition-transform group`}
+          className={`relative w-full md:w-84 aspect-16/11 rounded-2xl bg-gradient-to-br ${selectedSong.coverGradient} p-5 flex flex-col justify-between border border-white/20 shadow-2xl cursor-pointer hover:scale-102 transition-transform group`}
         >
           <div className="flex items-center justify-between">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-black/40 text-white border border-white/20 uppercase tracking-wider backdrop-blur-xs">
-              Pista Activa
-            </span>
+            <div className="flex items-center gap-1.5">
+              {selectedSong.levelNumber && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-white text-slate-950 uppercase tracking-wider">
+                  NIVEL {selectedSong.levelNumber}
+                </span>
+              )}
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-black/40 text-white border border-white/20 uppercase tracking-wider backdrop-blur-xs">
+                Pista Activa
+              </span>
+            </div>
             <div className="flex items-center gap-1 text-amber-300 text-xs font-bold bg-black/40 px-2 py-0.5 rounded-full border border-white/10">
               <Flame className="w-3.5 h-3.5" />
               <span>{selectedSong.bpm} BPM</span>
@@ -177,16 +202,44 @@ export const KeyboardHub: React.FC<Props> = ({
             <h3 className="text-xl font-black text-white drop-shadow-md group-hover:text-amber-200 transition-colors">
               {selectedSong.title}
             </h3>
-            <p className="text-xs text-white/80 font-medium">{selectedSong.artist}</p>
-            <div className="flex items-center gap-2 mt-2">
-              {selectedSong.laneKeys.map((k) => (
-                <span
-                  key={k}
-                  className="w-7 h-7 rounded-lg bg-black/50 border border-white/30 text-white flex items-center justify-center font-mono font-bold text-xs"
-                >
-                  {k}
-                </span>
-              ))}
+            <p className="text-xs text-white/80 font-medium">
+              {selectedSong.categoryLabel || selectedSong.artist}
+            </p>
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {selectedSong.laneKeys.length === 8 ? (
+                <>
+                  <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-lg border border-cyan-400/40">
+                    {selectedSong.laneKeys.slice(0, 4).map((k) => (
+                      <span
+                        key={k}
+                        className="w-6 h-6 rounded bg-cyan-500/30 text-cyan-200 flex items-center justify-center font-mono font-bold text-xs"
+                      >
+                        {k}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="text-white/60 font-bold text-xs">+</span>
+                  <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded-lg border border-fuchsia-400/40">
+                    {selectedSong.laneKeys.slice(4, 8).map((k) => (
+                      <span
+                        key={k}
+                        className="w-6 h-6 rounded bg-fuchsia-500/30 text-fuchsia-200 flex items-center justify-center font-mono font-bold text-xs"
+                      >
+                        {k}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                selectedSong.laneKeys.map((k) => (
+                  <span
+                    key={k}
+                    className="w-7 h-7 rounded-lg bg-black/50 border border-white/30 text-white flex items-center justify-center font-mono font-bold text-xs"
+                  >
+                    {k}
+                  </span>
+                ))
+              )}
             </div>
           </div>
         </div>
