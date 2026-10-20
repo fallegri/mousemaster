@@ -114,13 +114,12 @@ export const RhythmHighwayGame: React.FC<Props> = ({
   const currentTimeRef = useRef<number>(0);
   const [elapsedTime, setElapsedTime] = useState(0);
 
-  // Highway geometry constants
-  // Note travel duration from top horizon (0%) to hit line (88% down the track)
-  const NOTE_FALL_DURATION = 1.6; // seconds
-  const HIT_WINDOW_PERFECT = 0.065; // ±65ms
-  const HIT_WINDOW_GREAT = 0.12;   // ±120ms
-  const HIT_WINDOW_GOOD = 0.19;    // ±190ms
-  const HIT_WINDOW_MISS = 0.25;    // if passed without press
+  // Highway geometry constants: Ampliada y accesible (±1 segundo de tolerancia de acierto)
+  const NOTE_FALL_DURATION = 2.4; // 2.4s para visualización clara y anticipada
+  const HIT_WINDOW_PERFECT = 0.35; // ±350ms (Perfecto)
+  const HIT_WINDOW_GREAT = 0.70;   // ±700ms (Excelente)
+  const HIT_WINDOW_GOOD = 1.05;    // ±1050ms (~1 segundo antes o después es COMPLETAMENTE VÁLIDO)
+  const HIT_WINDOW_MISS = 1.15;    // Solo si pasa 1.15s sin presionar se marca como fallo
 
   // Start countdown on mount
   useEffect(() => {
@@ -147,7 +146,8 @@ export const RhythmHighwayGame: React.FC<Props> = ({
   const startGame = () => {
     setIsPlaying(true);
     sound.playHit(1.5);
-    rhythmAudio.playProceduralTrack(song, handleSongEnd);
+    // playSong handles both custom uploaded MP3/WAV files and procedural synthesizer tracks
+    rhythmAudio.playSong(song, handleSongEnd);
   };
 
   const handleSongEnd = () => {
@@ -230,14 +230,14 @@ export const RhythmHighwayGame: React.FC<Props> = ({
     const nowTime = currentTimeRef.current;
     const notes = notesRef.current;
 
-    // Find closest unhit note in this lane
+    // Find closest unhit note in this lane (within ±1.05s window)
     let closestNote: RhythmNote | null = null;
     let minDelta = Infinity;
 
     for (let note of notes) {
       if (note.lane === lane && !note.hit) {
         const delta = Math.abs(note.time - nowTime);
-        if (delta < minDelta && delta <= HIT_WINDOW_MISS) {
+        if (delta < minDelta && delta <= HIT_WINDOW_GOOD) {
           minDelta = delta;
           closestNote = note;
         }
@@ -309,7 +309,7 @@ export const RhythmHighwayGame: React.FC<Props> = ({
       currentTimeRef.current = now;
       setElapsedTime(now);
 
-      // Check for missed notes that passed beyond the hit zone
+      // Check for missed notes that passed beyond the hit zone (more than 1.15s past hit line)
       const notes = notesRef.current;
       for (let note of notes) {
         if (!note.hit && now - note.time > HIT_WINDOW_MISS) {
@@ -343,8 +343,10 @@ export const RhythmHighwayGame: React.FC<Props> = ({
     sound.playClick();
     if (isPaused) {
       setIsPaused(false);
+      rhythmAudio.resume();
     } else {
       setIsPaused(true);
+      rhythmAudio.pause();
     }
   };
 
@@ -375,6 +377,9 @@ export const RhythmHighwayGame: React.FC<Props> = ({
               <span>{song.title}</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">
                 {song.bpm} BPM
+              </span>
+              <span className="hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                Ventana ±1s Flexible
               </span>
             </h3>
             <p className="text-[11px] text-slate-400">{song.artist}</p>
@@ -492,16 +497,18 @@ export const RhythmHighwayGame: React.FC<Props> = ({
                 if (note.hit) return null;
 
                 const timeUntilHit = note.time - elapsedTime;
-                // Only render notes within the fall duration window
-                if (timeUntilHit < -0.15 || timeUntilHit > NOTE_FALL_DURATION) return null;
+                // Render notes within fall duration and up to 1.1s after hit line (allowing late hits)
+                if (timeUntilHit < -1.1 || timeUntilHit > NOTE_FALL_DURATION) return null;
 
-                // Progress: 0 at top horizon, 1 at hit line
+                // Progress: 0 at top horizon, 1 at hit line (88%)
                 const progress = 1 - timeUntilHit / NOTE_FALL_DURATION;
-                const topPercent = progress * 88; // 88% is hit line position
+                const topPercent = Math.min(96, progress * 88);
                 const laneCfg = LANE_CONFIGS[note.lane];
 
                 // Scale notes as they get closer (3D depth feeling)
-                const scale = 0.65 + progress * 0.45;
+                const scale = 0.65 + Math.min(1.05, progress) * 0.45;
+                const isLate = timeUntilHit < 0;
+                const opacity = isLate ? Math.max(0.4, 1 - Math.abs(timeUntilHit) / 1.15) : 1;
 
                 return (
                   <div
@@ -512,11 +519,14 @@ export const RhythmHighwayGame: React.FC<Props> = ({
                       width: '25%',
                       top: `${topPercent}%`,
                       transform: `translateY(-50%) scale(${scale})`,
+                      opacity,
                     }}
                   >
                     {/* Glowing Circular Note Bar (like reference image) */}
                     <div
-                      className="w-14 sm:w-16 h-7 sm:h-8 rounded-full border-2 flex items-center justify-center font-extrabold text-xs shadow-lg transition-transform"
+                      className={`w-14 sm:w-16 h-7 sm:h-8 rounded-full border-2 flex items-center justify-center font-extrabold text-xs shadow-lg transition-transform ${
+                        isLate ? 'ring-2 ring-emerald-400/50' : ''
+                      }`}
                       style={{
                         backgroundColor: '#0f172a',
                         borderColor: laneCfg.color,

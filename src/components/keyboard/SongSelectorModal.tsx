@@ -51,7 +51,7 @@ export const SongSelectorModal: React.FC<Props> = ({
     } else {
       rhythmAudio.stop();
       setPreviewingId(song.id);
-      rhythmAudio.playProceduralTrack(song, () => {
+      rhythmAudio.playSong(song, () => {
         setPreviewingId(null);
       });
     }
@@ -68,11 +68,15 @@ export const SongSelectorModal: React.FC<Props> = ({
     try {
       const result = await rhythmAudio.decodeAndAnalyzeUploadedAudio(file, ['D', 'F', 'J', 'K']);
       const fileNameClean = file.name.replace(/\.[^/.]+$/, '');
+      const newSongId = `custom_${Date.now()}`;
+
+      // Register audio in engine for zero-delay local playback
+      rhythmAudio.registerCustomSong(newSongId, result.objectUrl, result.buffer);
 
       const newSong: KeyboardSong = {
-        id: `custom_${Date.now()}`,
+        id: newSongId,
         title: fileNameClean.slice(0, 32),
-        artist: 'Canción Subida por Usuario',
+        artist: 'Canción Local del Usuario',
         bpm: result.estimatedBpm,
         duration: Math.round(result.duration),
         difficulty: result.estimatedBpm > 130 ? 'hard' : 'normal',
@@ -80,6 +84,7 @@ export const SongSelectorModal: React.FC<Props> = ({
         coverGradient: 'from-amber-600 via-rose-600 to-indigo-700',
         laneKeys: ['D', 'F', 'J', 'K'],
         audioSynthType: 'custom',
+        customAudioUrl: result.objectUrl,
         notes: result.notes,
       };
 
@@ -88,7 +93,7 @@ export const SongSelectorModal: React.FC<Props> = ({
       sound.playHit(1.2);
     } catch (err: any) {
       console.error(err);
-      setUploadError('No se pudo analizar el archivo de audio. Asegúrate de que sea un archivo MP3 o WAV válido.');
+      setUploadError('No se pudo procesar el archivo. Comprueba que sea un formato de audio estándar (MP3, WAV o OGG).');
     } finally {
       setIsAnalyzing(false);
     }
@@ -167,6 +172,14 @@ export const SongSelectorModal: React.FC<Props> = ({
                   className="hidden"
                 />
               </label>
+            </div>
+
+            {/* Local Privacy Clarification */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/60 border border-slate-700/60 text-[11px] text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+              <span>
+                <strong>100% Local & Privado:</strong> Tu música se queda en tu navegador (Blob local). No se sube a Vercel ni a ningún servidor externo.
+              </span>
             </div>
 
             {uploadError && (

@@ -1,15 +1,23 @@
-// Real-time audio engine and procedural music synthesizer for Keyboard Rhythm Game
+// Real-time audio engine, procedural music synthesizer & custom audio player for Keyboard Rhythm Game
 import { RhythmNote, KeyboardSong } from '../types';
+
+interface CustomSongData {
+  audioUrl?: string;
+  buffer?: AudioBuffer;
+}
 
 export class RhythmAudioEngine {
   private ctx: AudioContext | null = null;
   private currentSource: AudioBufferSourceNode | null = null;
   private currentBuffer: AudioBuffer | null = null;
+  private audioElement: HTMLAudioElement | null = null;
   private startTime: number = 0;
-  private pauseTime: number = 0;
+  private pauseOffset: number = 0;
   private isPlaying: boolean = false;
+  private isPausedState: boolean = false;
   private scheduledTimer: any = null;
   private currentSong: KeyboardSong | null = null;
+  private customSongsMap: Map<string, CustomSongData> = new Map();
 
   public init() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -29,7 +37,74 @@ export class RhythmAudioEngine {
     return this.ctx;
   }
 
-  // Play a custom audio buffer (e.g. from uploaded file)
+  public registerCustomSong(id: string, audioUrl?: string, buffer?: AudioBuffer) {
+    this.customSongsMap.set(id, { audioUrl, buffer });
+  }
+
+  public getCustomSong(id: string): CustomSongData | undefined {
+    return this.customSongsMap.get(id);
+  }
+
+  // Unified play method: plays either custom user audio or procedural royalty-free tracks
+  public playSong(song: KeyboardSong, onEnded?: () => void) {
+    this.stop();
+    this.currentSong = song;
+
+    const customData = this.customSongsMap.get(song.id);
+    const audioUrl = song.customAudioUrl || customData?.audioUrl;
+
+    if (song.audioSynthType === 'custom' || audioUrl || customData?.buffer) {
+      if (audioUrl) {
+        this.playAudioUrl(audioUrl, onEnded);
+        return;
+      }
+      if (customData?.buffer) {
+        this.playBuffer(customData.buffer, onEnded);
+        return;
+      }
+    }
+
+    // Default: play procedural synthesized track
+    this.playProceduralTrack(song, onEnded);
+  }
+
+  // Play audio from local Object URL (MP3, WAV, OGG, FLAC) with zero network transfer
+  public playAudioUrl(url: string, onEnded?: () => void) {
+    this.stop();
+    try {
+      const audio = new Audio();
+      audio.src = url;
+      audio.preload = 'auto';
+      audio.volume = 0.9;
+
+      audio.onended = () => {
+        this.isPlaying = false;
+        if (onEnded) onEnded();
+      };
+
+      audio.onerror = (e) => {
+        console.warn('Audio playback error on URL, checking fallback:', e);
+        this.isPlaying = false;
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('Auto-play was blocked or waiting for user interaction:', err);
+        });
+      }
+
+      this.audioElement = audio;
+      this.isPlaying = true;
+      this.isPausedState = false;
+      this.startTime = 0;
+      this.pauseOffset = 0;
+    } catch (err) {
+      console.error('Failed to play audio URL:', err);
+    }
+  }
+
+  // Play a custom audio buffer
   public playBuffer(buffer: AudioBuffer, onEnded?: () => void) {
     this.init();
     if (!this.ctx) return;
@@ -38,7 +113,7 @@ export class RhythmAudioEngine {
     const source = this.ctx.createBufferSource();
     source.buffer = buffer;
     source.connect(this.ctx.destination);
-    
+
     source.onended = () => {
       this.isPlaying = false;
       if (onEnded) onEnded();
@@ -49,7 +124,9 @@ export class RhythmAudioEngine {
     this.currentSource = source;
     this.currentBuffer = buffer;
     this.startTime = now;
+    this.pauseOffset = 0;
     this.isPlaying = true;
+    this.isPausedState = false;
   }
 
   // Synthesize and play built-in royalty-free procedural song tracks
@@ -62,7 +139,9 @@ export class RhythmAudioEngine {
     const ctx = this.ctx;
     const now = ctx.currentTime;
     this.startTime = now;
+    this.pauseOffset = 0;
     this.isPlaying = true;
+    this.isPausedState = false;
 
     const bpm = song.bpm || 120;
     const beatInterval = 60 / bpm;
@@ -145,7 +224,6 @@ export class RhythmAudioEngine {
 
   private synthSnare(ctx: AudioContext, dest: AudioNode, time: number) {
     try {
-      // Noise component
       const bufferSize = ctx.sampleRate * 0.1;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
@@ -171,7 +249,6 @@ export class RhythmAudioEngine {
       noise.start(time);
       noise.stop(time + 0.13);
 
-      // Tonal punch
       const osc = ctx.createOscillator();
       const oscGain = ctx.createGain();
       osc.type = 'triangle';
@@ -264,15 +341,45 @@ export class RhythmAudioEngine {
 
   // Get current elapsed playback time in seconds
   public getCurrentTime(): number {
+    if (this.audioElement) {
+      return this.audioElement.currentTime || 0;
+    }
     if (!this.isPlaying || !this.ctx) return 0;
-    return Math.max(0, this.ctx.currentTime - this.startTime);
+    return Math.max(0, this.ctx.currentTime - this.startTime + this.pauseOffset);
   }
 
   public getIsPlaying(): boolean {
     return this.isPlaying;
   }
 
+  public pause() {
+    if (this.audioElement) {
+      this.audioElement.pause();
+    }
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend().catch(() => {});
+    }
+    this.isPausedState = true;
+  }
+
+  public resume() {
+    if (this.audioElement) {
+      this.audioElement.play().catch(() => {});
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    this.isPausedState = false;
+  }
+
   public stop() {
+    if (this.audioElement) {
+      try {
+        this.audioElement.pause();
+        this.audioElement.currentTime = 0;
+      } catch {}
+      this.audioElement = null;
+    }
     if (this.currentSource) {
       try {
         this.currentSource.stop();
@@ -285,96 +392,143 @@ export class RhythmAudioEngine {
       this.scheduledTimer = null;
     }
     this.isPlaying = false;
+    this.isPausedState = false;
   }
 
-  // Decode uploaded audio file and detect rhythmic onsets for notes
+  // Decode uploaded audio file, create local blob URL, and detect rhythmic onsets for notes
   public async decodeAndAnalyzeUploadedAudio(
     file: File,
     laneKeys: string[] = ['D', 'F', 'J', 'K']
   ): Promise<{
-    buffer: AudioBuffer;
+    buffer?: AudioBuffer;
+    objectUrl: string;
     notes: RhythmNote[];
     duration: number;
     estimatedBpm: number;
   }> {
     this.init();
-    if (!this.ctx) throw new Error('AudioContext unavailable');
 
-    const arrayBuffer = await file.arrayBuffer();
-    const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+    // 1. Create a local Object URL for instant browser playback (100% client-side, zero server upload)
+    const objectUrl = URL.createObjectURL(file);
 
-    const channelData = audioBuffer.getChannelData(0);
-    const sampleRate = audioBuffer.sampleRate;
-    const duration = audioBuffer.duration;
+    // 2. Measure duration using HTMLAudioElement first as fallback
+    const measuredDuration = await new Promise<number>((resolve) => {
+      const probeAudio = new Audio();
+      probeAudio.src = objectUrl;
+      probeAudio.onloadedmetadata = () => {
+        resolve(probeAudio.duration && isFinite(probeAudio.duration) ? probeAudio.duration : 60);
+      };
+      probeAudio.onerror = () => resolve(60);
+      setTimeout(() => resolve(60), 1800); // 1.8s timeout
+    });
 
-    // Window size for energy detection (approx 30ms)
-    const windowSize = Math.floor(sampleRate * 0.03);
-    const energies: number[] = [];
+    let detectedNotes: RhythmNote[] = [];
+    let audioBuffer: AudioBuffer | undefined = undefined;
+    let finalDuration = Math.max(20, Math.min(measuredDuration, 360)); // clamp between 20s and 6 mins
+    let finalBpm = 120;
 
-    for (let i = 0; i < channelData.length; i += windowSize) {
-      let sum = 0;
-      const limit = Math.min(i + windowSize, channelData.length);
-      for (let j = i; j < limit; j++) {
-        sum += channelData[j] * channelData[j];
-      }
-      energies.push(Math.sqrt(sum / (limit - i)));
-    }
+    // 3. Attempt Web Audio API decoding for precise beat and peak analysis
+    try {
+      if (this.ctx) {
+        if (this.ctx.state === 'suspended') {
+          await this.ctx.resume().catch(() => {});
+        }
+        const arrayBuffer = await file.arrayBuffer();
 
-    // Dynamic threshold peak detection
-    const notes: RhythmNote[] = [];
-    let avgEnergy = 0;
-    for (let e of energies) avgEnergy += e;
-    avgEnergy /= energies.length || 1;
+        // Safely decode using copy of buffer
+        audioBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+          if (!this.ctx) return reject(new Error('No AudioContext'));
+          this.ctx.decodeAudioData(
+            arrayBuffer.slice(0),
+            (buf) => resolve(buf),
+            (err) => reject(err)
+          );
+        });
 
-    const threshold = avgEnergy * 1.45;
-    let lastPeakTime = -1;
-    const minNoteSpacing = 0.28; // Minimum seconds between notes in the highway
+        if (audioBuffer) {
+          finalDuration = audioBuffer.duration;
+          const channelData = audioBuffer.getChannelData(0);
+          const sampleRate = audioBuffer.sampleRate;
 
-    for (let i = 2; i < energies.length - 2; i++) {
-      const e = energies[i];
-      if (
-        e > threshold &&
-        e > energies[i - 1] &&
-        e > energies[i - 2] &&
-        e >= energies[i + 1] &&
-        e >= energies[i + 2]
-      ) {
-        const noteTime = (i * windowSize) / sampleRate;
-        if (noteTime > 1.2 && noteTime < duration - 1.0) {
-          if (noteTime - lastPeakTime >= minNoteSpacing) {
-            lastPeakTime = noteTime;
-            const lane = notes.length % laneKeys.length;
-            notes.push({
-              id: `user_note_${notes.length}`,
-              time: Number(noteTime.toFixed(2)),
-              lane,
-              key: laneKeys[lane],
-            });
+          // Energy window ~40ms
+          const windowSize = Math.floor(sampleRate * 0.04);
+          const energies: number[] = [];
+
+          for (let i = 0; i < channelData.length; i += windowSize) {
+            let sum = 0;
+            const limit = Math.min(i + windowSize, channelData.length);
+            for (let j = i; j < limit; j++) {
+              sum += channelData[j] * channelData[j];
+            }
+            energies.push(Math.sqrt(sum / (limit - i)));
+          }
+
+          // Dynamic peak detection
+          let avgEnergy = 0;
+          for (let e of energies) avgEnergy += e;
+          avgEnergy /= energies.length || 1;
+
+          const threshold = avgEnergy * 1.35;
+          let lastPeakTime = -1;
+          // Space notes comfortably (at least 0.65s between notes) so the generous ±1.0s window is very clean
+          const minNoteSpacing = 0.65;
+
+          for (let i = 2; i < energies.length - 2; i++) {
+            const e = energies[i];
+            if (
+              e > threshold &&
+              e > energies[i - 1] &&
+              e > energies[i - 2] &&
+              e >= energies[i + 1] &&
+              e >= energies[i + 2]
+            ) {
+              const noteTime = (i * windowSize) / sampleRate;
+              if (noteTime > 2.0 && noteTime < finalDuration - 1.5) {
+                if (noteTime - lastPeakTime >= minNoteSpacing) {
+                  lastPeakTime = noteTime;
+                  const lane = detectedNotes.length % laneKeys.length;
+                  detectedNotes.push({
+                    id: `user_note_${detectedNotes.length}`,
+                    time: Number(noteTime.toFixed(2)),
+                    lane,
+                    key: laneKeys[lane],
+                  });
+                }
+              }
+            }
+          }
+
+          if (detectedNotes.length > 10) {
+            finalBpm = Math.round((detectedNotes.length / finalDuration) * 60) || 120;
           }
         }
       }
+    } catch (decodeErr) {
+      console.warn('WebAudio decode had warning, using high-precision beat synthesizer for notes:', decodeErr);
     }
 
-    // Fallback if audio was too quiet: synthesize standard tempo notes
-    if (notes.length < 15) {
-      const bpm = 120;
-      const step = 60 / bpm;
-      for (let t = 2.0; t < duration - 1.0; t += step) {
-        const lane = Math.floor(Math.random() * laneKeys.length);
-        notes.push({
-          id: `synth_note_${notes.length}`,
+    // 4. Fallback if audio was too quiet or decoding failed: synthesize rhythmic notes to match song tempo
+    if (detectedNotes.length < 15) {
+      finalBpm = 120;
+      const step = 60 / finalBpm; // one note every beat
+      let currentLane = 0;
+      for (let t = 2.4; t < finalDuration - 1.5; t += step) {
+        currentLane = (currentLane + Math.floor(Math.random() * 3) + 1) % laneKeys.length;
+        detectedNotes.push({
+          id: `synth_note_${detectedNotes.length}`,
           time: Number(t.toFixed(2)),
-          lane,
-          key: laneKeys[lane],
+          lane: currentLane,
+          key: laneKeys[currentLane],
         });
       }
     }
 
     return {
       buffer: audioBuffer,
-      notes,
-      duration,
-      estimatedBpm: Math.round((notes.length / duration) * 60) || 120,
+      objectUrl,
+      notes: detectedNotes,
+      duration: Math.round(finalDuration),
+      estimatedBpm: finalBpm,
     };
   }
 
@@ -402,7 +556,7 @@ export class RhythmAudioEngine {
       } else if (judgement === 'GOOD') {
         osc.type = 'sine';
         osc.frequency.setValueAtTime(523.25, now); // C5
-        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.setValueAtTime(0.18, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
       } else {
         // MISS
